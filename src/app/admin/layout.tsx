@@ -15,6 +15,12 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         <Link href="/admin" className="block rounded px-2 py-1.5 text-sm hover:bg-accent">
           Dashboard
         </Link>
+        <Link
+          href="/admin/tournaments"
+          className="block rounded px-2 py-1.5 text-sm hover:bg-accent"
+        >
+          Turnaje
+        </Link>
         <Link href="/admin/users" className="block rounded px-2 py-1.5 text-sm hover:bg-accent">
           Uživatelé
         </Link>
