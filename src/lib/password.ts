@@ -1,7 +1,12 @@
-import { hash, verify, Algorithm } from "@node-rs/argon2";
+import { hash, verify } from "@node-rs/argon2";
+
+// Algorithm is an ambient const enum in @node-rs/argon2's .d.ts which
+// TS's isolatedModules forbids referencing. The wire value is stable
+// (Argon2id = 2) — see node_modules/@node-rs/argon2/index.d.ts.
+const ARGON2ID = 2 as const;
 
 const OPTS = {
-  algorithm: Algorithm.Argon2id,
+  algorithm: ARGON2ID,
   memoryCost: 19456,
   timeCost: 2,
   parallelism: 1,
