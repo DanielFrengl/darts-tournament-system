@@ -6,6 +6,7 @@ import { tournamentService } from "@/lib/tournament";
 import { buildGroupViews, buildBracketMatches } from "@/lib/tournament-views";
 import { GroupTable } from "@/components/tournament/GroupTable";
 import { BracketView } from "@/components/tournament/BracketView";
+import { TournamentLiveSync } from "@/components/tournament/TournamentLiveSync";
 
 export default async function TournamentOverviewPage() {
   const t = await tournamentService.getActive();
@@ -28,6 +29,7 @@ export default async function TournamentOverviewPage() {
 
   return (
     <div className="space-y-6">
+      <TournamentLiveSync tournamentId={t.id} />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">{t.name}</h1>
         <Badge variant="outline">{t.status}</Badge>

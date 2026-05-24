@@ -18,6 +18,7 @@ import {
   MarketCard,
   type MarketCardVM,
 } from "@/components/betting/MarketCard";
+import { MatchLiveSync } from "@/components/betting/MatchLiveSync";
 
 export default async function MatchDetailPage({
   params,
@@ -95,6 +96,7 @@ export default async function MatchDetailPage({
 
   return (
     <div className="space-y-6">
+      <MatchLiveSync matchId={id} marketIds={allMarkets.map((m) => m.id)} />
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Badge variant="outline">{phaseLabel}</Badge>

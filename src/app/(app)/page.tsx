@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { db } from "@/db/client";
 import { matches, players } from "@/db/schema";
 import { tournamentService } from "@/lib/tournament";
+import { TournamentLiveSync } from "@/components/tournament/TournamentLiveSync";
 
 export default async function DashboardPage() {
   const t = await tournamentService.getActive();
@@ -52,6 +53,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-4">
+      <TournamentLiveSync tournamentId={t.id} />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">{t.name}</h1>
         <Badge variant="outline">{t.status}</Badge>
