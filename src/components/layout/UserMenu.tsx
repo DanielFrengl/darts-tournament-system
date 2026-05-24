@@ -9,6 +9,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuLinkItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -37,10 +38,16 @@ export function UserMenu({
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuLabel>{username}</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem render={<Link href={`/u/${username}`}>Můj profil</Link>} />
-        <DropdownMenuItem render={<Link href="/settings">Nastavení</Link>} />
+        <DropdownMenuLinkItem render={<Link href={`/u/${username}`} />}>
+          Můj profil
+        </DropdownMenuLinkItem>
+        <DropdownMenuLinkItem render={<Link href="/settings" />}>
+          Nastavení
+        </DropdownMenuLinkItem>
         {role === "admin" && (
-          <DropdownMenuItem render={<Link href="/admin">Admin</Link>} />
+          <DropdownMenuLinkItem render={<Link href="/admin" />}>
+            Admin
+          </DropdownMenuLinkItem>
         )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
