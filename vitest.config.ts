@@ -12,6 +12,9 @@ export default defineConfig({
     poolOptions: { forks: { singleFork: true } },
   },
   resolve: {
-    alias: { "@": path.resolve(__dirname, "./src") },
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+      "server-only": path.resolve(__dirname, "./tests/setup/server-only-shim.ts"),
+    },
   },
 });
