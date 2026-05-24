@@ -1,0 +1,29 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: darts-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: darts
+      POSTGRES_PASSWORD: darts
+      POSTGRES_DB: darts
+    ports:
+      - "5432:5432"
+    volumes:
+      - darts_pgdata:/var/lib/postgresql/data
+
+  db_test:
+    image: postgres:16-alpine
+    container_name: darts-postgres-test
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: darts
+      POSTGRES_PASSWORD: darts
+      POSTGRES_DB: darts_test
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+
+volumes:
+  darts_pgdata:
