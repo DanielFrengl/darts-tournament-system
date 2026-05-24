@@ -16,7 +16,7 @@ export async function setupTestDb() {
 
 export async function truncateAll() {
   await testDb.execute(
-    sql`TRUNCATE TABLE transactions, users RESTART IDENTITY CASCADE`
+    sql`TRUNCATE TABLE transactions, users CASCADE`
   );
 }
 

@@ -36,10 +36,7 @@ export const users = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
-  },
-  (t) => ({
-    usernameIdx: index("users_username_idx").on(t.username),
-  })
+  }
 );
 
 export const transactions = pgTable(
