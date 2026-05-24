@@ -10,6 +10,11 @@ export default defineConfig({
     testTimeout: 15000,
     pool: "forks",
     poolOptions: { forks: { singleFork: true } },
+    server: {
+      deps: {
+        inline: [/next-auth/, /@auth\/core/],
+      },
+    },
   },
   resolve: {
     alias: {

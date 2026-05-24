@@ -64,3 +64,61 @@ describe("registerUser action", () => {
     expect(r.ok).toBe(false);
   });
 });
+
+import { updateBio, updateAvatar, changePassword } from "@/app/(app)/settings/actions";
+import { hashPassword } from "@/lib/password";
+
+describe("settings actions", () => {
+  it("updateBio updates user bio", async () => {
+    const [u] = await testDb
+      .insert(users)
+      .values({ email: "bio@a.cz", username: "biouser", passwordHash: "x" })
+      .returning();
+    const result = await updateBio(u!.id, "Hello world");
+    expect(result.ok).toBe(true);
+    const [updated] = await testDb.select().from(users).where(eq(users.id, u!.id));
+    expect(updated?.bio).toBe("Hello world");
+  });
+
+  it("updateAvatar updates avatar_url", async () => {
+    const [u] = await testDb
+      .insert(users)
+      .values({ email: "av@a.cz", username: "avuser", passwordHash: "x" })
+      .returning();
+    const result = await updateAvatar("https://cdn.example.com/x.png", u!.id);
+    expect(result.ok).toBe(true);
+    const [updated] = await testDb.select().from(users).where(eq(users.id, u!.id));
+    expect(updated?.avatarUrl).toBe("https://cdn.example.com/x.png");
+  });
+
+  it("updateAvatar rejects non-https URL", async () => {
+    const [u] = await testDb
+      .insert(users)
+      .values({ email: "av2@a.cz", username: "avuser2", passwordHash: "x" })
+      .returning();
+    const result = await updateAvatar("file:///etc/passwd", u!.id);
+    expect(result.ok).toBe(false);
+  });
+
+  it("changePassword succeeds with correct current password", async () => {
+    const passwordHash = await hashPassword("oldpassword123");
+    const [u] = await testDb
+      .insert(users)
+      .values({ email: "pw@a.cz", username: "pwuser", passwordHash })
+      .returning();
+    const result = await changePassword(u!.id, "oldpassword123", "newpassword123");
+    expect(result.ok).toBe(true);
+    const [updated] = await testDb.select().from(users).where(eq(users.id, u!.id));
+    expect(await verifyPassword("newpassword123", updated!.passwordHash)).toBe(true);
+  });
+
+  it("changePassword fails with wrong current password", async () => {
+    const passwordHash = await hashPassword("oldpassword123");
+    const [u] = await testDb
+      .insert(users)
+      .values({ email: "pw2@a.cz", username: "pwuser2", passwordHash })
+      .returning();
+    const result = await changePassword(u!.id, "WRONG", "newpassword123");
+    expect(result.ok).toBe(false);
+  });
+});
