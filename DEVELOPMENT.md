@@ -45,6 +45,15 @@ App runs at <http://localhost:3000>.
 
 The first registered user automatically becomes admin.
 
+## Real-time updates
+
+Match detail, tournament overview, and the dashboard auto-refresh via
+Server-Sent Events on `/api/events`. The pub/sub bus is in-process —
+it works on a single Node server (local dev, single-instance prod).
+For multi-instance deployments (Vercel serverless, multiple replicas)
+swap `src/lib/event-bus.ts` for Pusher/Ably/Redis pub-sub; the
+public API (`publish`/`subscribe`) is intentionally compatible.
+
 ## Tests
 
 ```bash

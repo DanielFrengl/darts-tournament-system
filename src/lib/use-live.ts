@@ -16,10 +16,12 @@ export type LiveEvent = {
  */
 export function useLive(channels: string[], onEvent: (e: LiveEvent) => void): void {
   const cbRef = useRef(onEvent);
-  cbRef.current = onEvent;
+  useEffect(() => {
+    cbRef.current = onEvent;
+  }, [onEvent]);
   const channelsKey = channels.slice().sort().join(",");
   useEffect(() => {
-    if (channels.length === 0) return;
+    if (channelsKey.length === 0) return;
     const url = `/api/events?channels=${encodeURIComponent(channelsKey)}`;
     const es = new EventSource(url);
     es.onmessage = (msg) => {
@@ -31,6 +33,5 @@ export function useLive(channels: string[], onEvent: (e: LiveEvent) => void): vo
       }
     };
     return () => es.close();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelsKey]);
 }
