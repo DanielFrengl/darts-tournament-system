@@ -1,10 +1,11 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { matches } from "@/db/schema";
+import { matches, players } from "@/db/schema";
 import { marketService } from "@/lib/market";
 import { bettingService } from "@/lib/betting";
 import { bracketService } from "@/lib/bracket";
 import { publish } from "@/lib/event-bus";
+import { updateRatings } from "@/lib/elo";
 
 /**
  * Match/leg → market orchestration. Pure side-effect choreography:
@@ -84,6 +85,10 @@ export async function onLegFinished({
     const matchLosing = matchAllSelections.filter((id) => !matchWinning.includes(id));
     await bettingService.settleSelections(matchWinning, matchLosing);
 
+    // Update both players' ELO ratings before advancing the bracket so
+    // any seeded markets for next-round matches use the updated numbers.
+    await updateMatchElo(matchId, matchWinnerId);
+
     // Move the bracket forward (creates next-round matches as needed)
     // and seed markets for any newly created matches.
     await bracketService.advanceWinner(matchId);
@@ -147,6 +152,18 @@ async function selectionsOfMatchScopedMarkets(matchId: string): Promise<string[]
  * tournament. Walk all open playoff matches without markets and seed
  * them. Idempotent because createForMatch is itself idempotent.
  */
+async function updateMatchElo(matchId: string, winnerId: string): Promise<void> {
+  const [m] = await db.select().from(matches).where(eq(matches.id, matchId));
+  if (!m || !m.playerAId || !m.playerBId) return;
+  const [pA] = await db.select().from(players).where(eq(players.id, m.playerAId));
+  const [pB] = await db.select().from(players).where(eq(players.id, m.playerBId));
+  if (!pA || !pB) return;
+  const winnerSide = winnerId === pA.id ? "A" : "B";
+  const { nextA, nextB } = updateRatings(pA.eloRating, pB.eloRating, winnerSide);
+  await db.update(players).set({ eloRating: nextA }).where(eq(players.id, pA.id));
+  await db.update(players).set({ eloRating: nextB }).where(eq(players.id, pB.id));
+}
+
 async function createMarketsForNewMatches(originatingMatchId: string): Promise<void> {
   const [origin] = await db.select().from(matches).where(eq(matches.id, originatingMatchId));
   if (!origin) return;
