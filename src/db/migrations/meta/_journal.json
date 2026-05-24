@@ -15,6 +15,13 @@
       "when": 1779613731045,
       "tag": "0001_sharp_spectrum",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779638950011,
+      "tag": "0002_short_daimon_hellstrom",
+      "breakpoints": true
     }
   ]
 }
