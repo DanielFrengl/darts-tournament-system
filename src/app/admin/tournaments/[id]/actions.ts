@@ -8,6 +8,8 @@ import { auth } from "@/lib/auth";
 import { tournamentService } from "@/lib/tournament";
 import { matchService } from "@/lib/match";
 import { bracketService } from "@/lib/bracket";
+import { marketService } from "@/lib/market";
+import { bettingService } from "@/lib/betting";
 import { onMatchesCreated } from "@/lib/match-lifecycle";
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -42,6 +44,7 @@ export async function startGroups(tournamentId: string): Promise<Result> {
     await tournamentService.transition(tournamentId, "groups");
     const groupMatches = await matchService.listGroupMatches(tournamentId);
     await onMatchesCreated(groupMatches.map((m) => m.id));
+    await marketService.createTournamentWinner(tournamentId);
     revalidatePath(`/admin/tournaments/${tournamentId}`);
     revalidatePath("/tournament");
     return { ok: true };
@@ -69,6 +72,9 @@ export async function createBracket(tournamentId: string): Promise<Result> {
     const all = await matchService.listByTournament(tournamentId);
     const playoff = all.filter((m) => m.phase !== "group");
     await onMatchesCreated(playoff.map((m) => m.id));
+    // Close tournament futures once the playoff starts — no more bets
+    // on the open field; settle later when the final concludes.
+    await marketService.closeTournamentMarkets(tournamentId);
     revalidatePath(`/admin/tournaments/${tournamentId}`);
     revalidatePath("/tournament");
     return { ok: true };
@@ -93,10 +99,38 @@ export async function finishTournament(tournamentId: string): Promise<Result> {
   }
   try {
     await tournamentService.transition(tournamentId, "finished");
+    // Settle tournament-level markets using the final's winner.
+    if (final.winnerId) {
+      const winning = await marketService.settleTournamentWinner(
+        tournamentId,
+        final.winnerId
+      );
+      const allTourSelections = await tournamentSelectionIds(tournamentId);
+      const losing = allTourSelections.filter((id) => !winning.includes(id));
+      await bettingService.settleSelections(winning, losing);
+    }
     revalidatePath(`/admin/tournaments/${tournamentId}`);
     revalidatePath("/tournament");
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Failed" };
   }
+}
+
+async function tournamentSelectionIds(tournamentId: string): Promise<string[]> {
+  const { markets, marketSelections } = await import("@/db/schema");
+  const ms = await db
+    .select()
+    .from(markets)
+    .where(eq(markets.tournamentId, tournamentId));
+  const tourScoped = ms.filter((m) => m.scope === "tournament");
+  const out: string[] = [];
+  for (const m of tourScoped) {
+    const sels = await db
+      .select({ id: marketSelections.id })
+      .from(marketSelections)
+      .where(eq(marketSelections.marketId, m.id));
+    for (const s of sels) out.push(s.id);
+  }
+  return out;
 }
