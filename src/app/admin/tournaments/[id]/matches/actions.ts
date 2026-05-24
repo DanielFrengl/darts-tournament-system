@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
-import { legService, recordLegAndAdvance } from "@/lib/leg";
+import {
+  cancelMatchWithMarkets,
+  recordLegAndAdvance,
+  startLegWithMarkets,
+} from "@/lib/leg";
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -17,7 +21,7 @@ export async function startLegAction(
 ): Promise<Result> {
   if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
   try {
-    await legService.startLeg(matchId);
+    await startLegWithMarkets(matchId);
     revalidatePath(`/admin/tournaments/${tournamentId}/matches`);
     revalidatePath("/tournament");
     return { ok: true };
@@ -48,7 +52,7 @@ export async function cancelMatchAction(
 ): Promise<Result> {
   if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
   try {
-    await legService.cancelMatch(matchId);
+    await cancelMatchWithMarkets(matchId);
     revalidatePath(`/admin/tournaments/${tournamentId}/matches`);
     revalidatePath("/tournament");
     return { ok: true };

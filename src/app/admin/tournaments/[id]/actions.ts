@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth";
 import { tournamentService } from "@/lib/tournament";
 import { matchService } from "@/lib/match";
 import { bracketService } from "@/lib/bracket";
+import { onMatchesCreated } from "@/lib/match-lifecycle";
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -39,6 +40,8 @@ export async function startGroups(tournamentId: string): Promise<Result> {
   try {
     await matchService.generateGroupMatches(tournamentId);
     await tournamentService.transition(tournamentId, "groups");
+    const groupMatches = await matchService.listGroupMatches(tournamentId);
+    await onMatchesCreated(groupMatches.map((m) => m.id));
     revalidatePath(`/admin/tournaments/${tournamentId}`);
     revalidatePath("/tournament");
     return { ok: true };
@@ -63,6 +66,9 @@ export async function createBracket(tournamentId: string): Promise<Result> {
   try {
     await bracketService.createBracket(tournamentId);
     await tournamentService.transition(tournamentId, "playoff");
+    const all = await matchService.listByTournament(tournamentId);
+    const playoff = all.filter((m) => m.phase !== "group");
+    await onMatchesCreated(playoff.map((m) => m.id));
     revalidatePath(`/admin/tournaments/${tournamentId}`);
     revalidatePath("/tournament");
     return { ok: true };

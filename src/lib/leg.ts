@@ -1,7 +1,6 @@
 import { and, eq, asc, max } from "drizzle-orm";
 import { legs, matches, type Leg, type Match } from "@/db/schema";
 import type { DB } from "@/db/client";
-import { BracketService } from "@/lib/bracket";
 
 export class LegService {
   constructor(private readonly db: DB) {}
@@ -118,15 +117,44 @@ import { db } from "@/db/client";
 export const legService = new LegService(db);
 
 /**
- * Convenience wrapper that records a leg AND advances the bracket if
- * the match just finished. Use this from server actions; raw LegService
- * stays pure for tests that don't want bracket side-effects.
+ * Convenience wrapper used by admin server actions:
+ *   1. record the leg + finalize match if needed (LegService),
+ *   2. settle leg + match markets (lifecycle),
+ *   3. advance bracket + seed markets for new matches (lifecycle).
+ * Raw LegService stays free of market/bracket coupling so unit tests
+ * can target it in isolation.
  */
 export async function recordLegAndAdvance(legId: string, winnerId: string) {
+  const { onLegFinished } = await import("@/lib/match-lifecycle");
   const result = await legService.recordLeg(legId, winnerId);
-  if (result.match.status === "finished") {
-    const bracketService = new BracketService(db);
-    await bracketService.advanceWinner(result.match.id);
-  }
+  await onLegFinished({
+    legId: result.leg.id,
+    matchId: result.match.id,
+    legWinnerId: winnerId,
+    matchFinished: result.match.status === "finished",
+    matchWinnerId: result.match.winnerId,
+    scoreA: result.match.scoreA,
+    scoreB: result.match.scoreB,
+  });
   return result;
+}
+
+/**
+ * Mirror wrapper: start a leg AND wire the market lifecycle so the
+ * leg_winner market opens and (on leg 1) the match markets close.
+ */
+export async function startLegWithMarkets(matchId: string) {
+  const { onLegStarted } = await import("@/lib/match-lifecycle");
+  const leg = await legService.startLeg(matchId);
+  await onLegStarted(leg.id, matchId, leg.legNumber);
+  return leg;
+}
+
+/**
+ * Wrapper for cancellation that also cancels markets and refunds bets.
+ */
+export async function cancelMatchWithMarkets(matchId: string) {
+  const { onMatchCancelled } = await import("@/lib/match-lifecycle");
+  await legService.cancelMatch(matchId);
+  await onMatchCancelled(matchId);
 }
