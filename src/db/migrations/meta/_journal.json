@@ -22,6 +22,13 @@
       "when": 1779638950011,
       "tag": "0002_short_daimon_hellstrom",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1779657147982,
+      "tag": "0003_short_swarm",
+      "breakpoints": true
     }
   ]
 }

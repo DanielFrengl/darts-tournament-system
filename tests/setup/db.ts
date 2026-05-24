@@ -16,7 +16,7 @@ export async function setupTestDb() {
 
 export async function truncateAll() {
   await testDb.execute(
-    sql`TRUNCATE TABLE transactions, legs, matches, players, groups, tournaments, users CASCADE`
+    sql`TRUNCATE TABLE bets, market_selections, markets, transactions, legs, matches, players, groups, tournaments, users CASCADE`
   );
 }
 

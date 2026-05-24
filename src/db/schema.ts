@@ -47,6 +47,28 @@ export const matchStatusEnum = pgEnum("match_status", [
 
 export const legStatusEnum = pgEnum("leg_status", ["pending", "live", "finished"]);
 
+export const marketTypeEnum = pgEnum("market_type", [
+  "match_winner",
+  "correct_score",
+  "leg_winner",
+]);
+
+export const marketScopeEnum = pgEnum("market_scope", ["match", "leg"]);
+
+export const marketStatusEnum = pgEnum("market_status", [
+  "open",
+  "closed",
+  "settled",
+  "cancelled",
+]);
+
+export const betStatusEnum = pgEnum("bet_status", [
+  "open",
+  "won",
+  "lost",
+  "refunded",
+]);
+
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: varchar("email", { length: 255 }).notNull().unique(),
@@ -177,6 +199,74 @@ export const legs = pgTable(
   })
 );
 
+export const markets = pgTable(
+  "markets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tournamentId: uuid("tournament_id")
+      .notNull()
+      .references(() => tournaments.id, { onDelete: "cascade" }),
+    matchId: uuid("match_id").references(() => matches.id, { onDelete: "cascade" }),
+    legId: uuid("leg_id").references(() => legs.id, { onDelete: "cascade" }),
+    type: marketTypeEnum("type").notNull(),
+    scope: marketScopeEnum("scope").notNull(),
+    status: marketStatusEnum("status").notNull().default("open"),
+    opensAt: timestamp("opens_at", { withTimezone: true }).notNull().defaultNow(),
+    closesAt: timestamp("closes_at", { withTimezone: true }),
+    settledAt: timestamp("settled_at", { withTimezone: true }),
+  },
+  (t) => ({
+    matchIdx: index("markets_match_idx").on(t.matchId),
+    legIdx: index("markets_leg_idx").on(t.legId),
+    statusIdx: index("markets_status_idx").on(t.status),
+  })
+);
+
+export const marketSelections = pgTable(
+  "market_selections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    marketId: uuid("market_id")
+      .notNull()
+      .references(() => markets.id, { onDelete: "cascade" }),
+    label: varchar("label", { length: 80 }).notNull(),
+    playerId: uuid("player_id").references(() => players.id, { onDelete: "set null" }),
+    scoreA: integer("score_a"),
+    scoreB: integer("score_b"),
+    statOdds: numeric("stat_odds", { precision: 8, scale: 4 }).notNull(),
+    pariOdds: numeric("pari_odds", { precision: 8, scale: 4 }),
+    finalOdds: numeric("final_odds", { precision: 8, scale: 4 }).notNull(),
+    isWinner: jsonb("is_winner").$type<boolean | null>(),
+  },
+  (t) => ({
+    marketIdx: index("market_selections_market_idx").on(t.marketId),
+  })
+);
+
+export const bets = pgTable(
+  "bets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    selectionId: uuid("selection_id")
+      .notNull()
+      .references(() => marketSelections.id, { onDelete: "restrict" }),
+    stake: numeric("stake", { precision: 12, scale: 2 }).notNull(),
+    lockedOdds: numeric("locked_odds", { precision: 8, scale: 4 }).notNull(),
+    status: betStatusEnum("status").notNull().default("open"),
+    payout: numeric("payout", { precision: 12, scale: 2 }),
+    placedAt: timestamp("placed_at", { withTimezone: true }).notNull().defaultNow(),
+    settledAt: timestamp("settled_at", { withTimezone: true }),
+  },
+  (t) => ({
+    userIdx: index("bets_user_idx").on(t.userId),
+    selectionIdx: index("bets_selection_idx").on(t.selectionId),
+    statusIdx: index("bets_status_idx").on(t.status),
+  })
+);
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Transaction = typeof transactions.$inferSelect;
@@ -191,3 +281,9 @@ export type Match = typeof matches.$inferSelect;
 export type NewMatch = typeof matches.$inferInsert;
 export type Leg = typeof legs.$inferSelect;
 export type NewLeg = typeof legs.$inferInsert;
+export type Market = typeof markets.$inferSelect;
+export type NewMarket = typeof markets.$inferInsert;
+export type MarketSelection = typeof marketSelections.$inferSelect;
+export type NewMarketSelection = typeof marketSelections.$inferInsert;
+export type Bet = typeof bets.$inferSelect;
+export type NewBet = typeof bets.$inferInsert;
