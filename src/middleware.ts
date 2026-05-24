@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
-const PROTECTED = ["/dashboard", "/settings", "/bets", "/leaderboard"];
+const PROTECTED = ["/", "/dashboard", "/settings", "/bets", "/leaderboard", "/tournament", "/u/"];
 const ADMIN_ONLY = ["/admin"];
 
 export default auth((req) => {
@@ -27,5 +27,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|login|register).*)"],
 };
