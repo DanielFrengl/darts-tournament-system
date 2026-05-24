@@ -4,6 +4,7 @@ import { matches } from "@/db/schema";
 import { marketService } from "@/lib/market";
 import { bettingService } from "@/lib/betting";
 import { bracketService } from "@/lib/bracket";
+import { publish } from "@/lib/event-bus";
 
 /**
  * Match/leg → market orchestration. Pure side-effect choreography:
@@ -14,6 +15,15 @@ import { bracketService } from "@/lib/bracket";
 export async function onMatchesCreated(matchIds: string[]): Promise<void> {
   for (const id of matchIds) {
     await marketService.createForMatch(id);
+  }
+  // Tell each affected tournament page to refresh.
+  const tournamentIds = new Set<string>();
+  for (const id of matchIds) {
+    const [m] = await db.select().from(matches).where(eq(matches.id, id));
+    if (m) tournamentIds.add(m.tournamentId);
+  }
+  for (const tid of tournamentIds) {
+    publish(`tournament:${tid}`, "matches_created");
   }
 }
 
@@ -27,6 +37,9 @@ export async function onLegStarted(legId: string, matchId: string, legNumber: nu
     await marketService.closeMatchMarkets(matchId);
   }
   await marketService.createForLeg(legId);
+  publish(`match:${matchId}`, "leg_started", { legId, legNumber });
+  const [m] = await db.select().from(matches).where(eq(matches.id, matchId));
+  if (m) publish(`tournament:${m.tournamentId}`, "match_updated", { matchId });
 }
 
 /**
@@ -76,11 +89,28 @@ export async function onLegFinished({
     await bracketService.advanceWinner(matchId);
     await createMarketsForNewMatches(matchId);
   }
+
+  publish(`match:${matchId}`, matchFinished ? "finished" : "leg_finished", {
+    legId,
+    legWinnerId,
+    scoreA,
+    scoreB,
+  });
+  const [m] = await db.select().from(matches).where(eq(matches.id, matchId));
+  if (m) {
+    publish(`tournament:${m.tournamentId}`, "standings_updated", { matchId });
+    if (matchFinished) {
+      publish(`tournament:${m.tournamentId}`, "bracket_updated", { matchId });
+    }
+  }
 }
 
 export async function onMatchCancelled(matchId: string): Promise<void> {
   const ids = await marketService.cancelMatchMarkets(matchId);
   await bettingService.refundSelections(ids);
+  publish(`match:${matchId}`, "cancelled");
+  const [m] = await db.select().from(matches).where(eq(matches.id, matchId));
+  if (m) publish(`tournament:${m.tournamentId}`, "match_updated", { matchId });
 }
 
 async function selectionsOfMarketByLeg(legId: string): Promise<string[]> {

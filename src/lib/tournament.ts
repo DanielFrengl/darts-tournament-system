@@ -1,6 +1,7 @@
 import { desc, eq, ne } from "drizzle-orm";
 import { tournaments, type Tournament } from "@/db/schema";
 import type { DB } from "@/db/client";
+import { publish } from "@/lib/event-bus";
 import {
   TournamentConfigSchema,
   TournamentCreateSchema,
@@ -82,6 +83,7 @@ export class TournamentService {
       updates.finishedAt = new Date();
     }
     await this.db.update(tournaments).set(updates).where(eq(tournaments.id, id));
+    publish(`tournament:${id}`, "status_changed", { status: to });
   }
 
   async rename(id: string, name: string): Promise<void> {

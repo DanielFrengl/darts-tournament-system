@@ -19,6 +19,7 @@ import {
   probabilityToOdds,
 } from "@/lib/odds";
 import type { TournamentConfig } from "@/lib/tournament-config";
+import { publish } from "@/lib/event-bus";
 
 type SelectionDraft = {
   label: string;
@@ -244,6 +245,7 @@ export class MarketService {
         })
         .where(eq(marketSelections.id, sel.id));
     }
+    publish(`market:${marketId}`, "odds_changed", { totalPool });
   }
 
   /**
