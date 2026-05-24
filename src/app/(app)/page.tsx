@@ -75,10 +75,10 @@ export default async function DashboardPage() {
                     <Badge variant={m.status === "live" ? "default" : "secondary"}>
                       {m.status}
                     </Badge>
-                    <span className="text-sm">
+                    <Link href={`/match/${m.id}`} className="text-sm underline-offset-2 hover:underline">
                       {nameById.get(m.playerAId ?? "") ?? "?"} vs{" "}
                       {nameById.get(m.playerBId ?? "") ?? "?"}
-                    </span>
+                    </Link>
                   </div>
                   <span className="font-mono text-sm">
                     {m.scoreA} : {m.scoreB}
