@@ -23,6 +23,21 @@ export async function addPlayer(tournamentId: string, name: string): Promise<Res
   }
 }
 
+export async function addPlayerFromUser(
+  tournamentId: string,
+  userId: string
+): Promise<Result> {
+  if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
+  try {
+    await playerService.addFromUser(tournamentId, userId);
+    revalidatePath(`/admin/tournaments/${tournamentId}/players`);
+    revalidatePath(`/admin/tournaments/${tournamentId}`);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
 export async function removePlayer(
   tournamentId: string,
   playerId: string

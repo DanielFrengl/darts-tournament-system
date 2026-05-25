@@ -136,6 +136,7 @@ export const players = pgTable(
     tournamentId: uuid("tournament_id")
       .notNull()
       .references(() => tournaments.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
     name: varchar("name", { length: 80 }).notNull(),
     avatarUrl: text("avatar_url"),
     groupId: uuid("group_id").references(() => groups.id, { onDelete: "set null" }),
@@ -146,6 +147,8 @@ export const players = pgTable(
   (t) => ({
     tournamentIdx: index("players_tournament_idx").on(t.tournamentId),
     groupIdx: index("players_group_idx").on(t.groupId),
+    userIdx: index("players_user_idx").on(t.userId),
+    tournamentUserUq: uniqueIndex("players_tournament_user_uq").on(t.tournamentId, t.userId),
   })
 );
 

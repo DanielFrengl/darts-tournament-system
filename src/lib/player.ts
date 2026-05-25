@@ -1,5 +1,12 @@
 import { and, eq, asc, isNull } from "drizzle-orm";
-import { groups, players, tournaments, type Group, type Player } from "@/db/schema";
+import {
+  groups,
+  players,
+  tournaments,
+  users,
+  type Group,
+  type Player,
+} from "@/db/schema";
 import type { DB } from "@/db/client";
 
 export class PlayerService {
@@ -30,7 +37,36 @@ export class PlayerService {
     await this.requireDraft(tournamentId);
     const [row] = await this.db
       .insert(players)
-      .values({ tournamentId, name: name.trim(), avatarUrl: avatarUrl ?? null })
+      .values({
+        tournamentId,
+        name: name.trim(),
+        avatarUrl: avatarUrl ?? null,
+        userId: null,
+      })
+      .returning();
+    if (!row) throw new Error("failed to add player");
+    return row;
+  }
+
+  async addFromUser(tournamentId: string, userId: string): Promise<Player> {
+    await this.requireDraft(tournamentId);
+    const [u] = await this.db.select().from(users).where(eq(users.id, userId));
+    if (!u) throw new Error("user not found");
+    const existing = await this.db
+      .select()
+      .from(players)
+      .where(and(eq(players.tournamentId, tournamentId), eq(players.userId, userId)));
+    if (existing.length > 0) {
+      throw new Error("Tento uživatel už je v turnaji přidán");
+    }
+    const [row] = await this.db
+      .insert(players)
+      .values({
+        tournamentId,
+        userId: u.id,
+        name: u.username,
+        avatarUrl: u.avatarUrl,
+      })
       .returning();
     if (!row) throw new Error("failed to add player");
     return row;

@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
+import { asc, eq, inArray, notInArray } from "drizzle-orm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { db } from "@/db/client";
+import { players, users } from "@/db/schema";
 import { tournamentService } from "@/lib/tournament";
 import { playerService } from "@/lib/player";
 import { PlayerManager } from "@/components/admin/PlayerManager";
@@ -15,9 +18,33 @@ export default async function PlayersPage({
   const t = await tournamentService.get(id);
   if (!t) notFound();
 
-  let groups = await playerService.listGroups(id);
+  const groups = await playerService.listGroups(id);
   const editable = t.status === "draft";
-  const players = await playerService.list(id);
+  const playerRows = await playerService.list(id);
+
+  const alreadyLinked = playerRows
+    .map((p) => p.userId)
+    .filter((x): x is string => !!x);
+  const availableUsers =
+    alreadyLinked.length > 0
+      ? await db
+          .select({
+            id: users.id,
+            username: users.username,
+            avatarUrl: users.avatarUrl,
+          })
+          .from(users)
+          .where(notInArray(users.id, alreadyLinked))
+          .orderBy(asc(users.username))
+      : await db
+          .select({
+            id: users.id,
+            username: users.username,
+            avatarUrl: users.avatarUrl,
+          })
+          .from(users)
+          .orderBy(asc(users.username));
+  void inArray;
 
   async function createGroupsAction() {
     "use server";
@@ -25,7 +52,7 @@ export default async function PlayersPage({
   }
 
   return (
-    <div className="max-w-2xl space-y-4">
+    <div className="max-w-3xl space-y-4">
       <h1 className="text-2xl font-semibold">{t.name} — Hráči</h1>
       <Card>
         <CardHeader>
@@ -35,10 +62,12 @@ export default async function PlayersPage({
           {groups.length === 0 ? (
             <form action={createGroupsAction}>
               <p className="mb-2 text-sm text-muted-foreground">
-                Skupiny ještě nejsou vytvořeny. Klikni dole na vytvoření {t.configJson.groupCount}{" "}
-                skupin.
+                Skupiny ještě nejsou vytvořeny. Klikni dole na vytvoření{" "}
+                {t.configJson.groupCount} skupin.
               </p>
-              <Button type="submit">Vytvořit skupiny A..{String.fromCharCode(64 + t.configJson.groupCount)}</Button>
+              <Button type="submit">
+                Vytvořit skupiny A..{String.fromCharCode(64 + t.configJson.groupCount)}
+              </Button>
             </form>
           ) : (
             <ul className="flex flex-wrap gap-2 text-sm">
@@ -53,13 +82,20 @@ export default async function PlayersPage({
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Hráči ({players.length})</CardTitle>
+          <CardTitle>Hráči ({playerRows.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <PlayerManager
             tournamentId={id}
-            players={players.map((p) => ({ id: p.id, name: p.name, groupId: p.groupId }))}
+            players={playerRows.map((p) => ({
+              id: p.id,
+              name: p.name,
+              groupId: p.groupId,
+              userId: p.userId,
+              avatarUrl: p.avatarUrl,
+            }))}
             groups={groups.map((g) => ({ id: g.id, name: g.name }))}
+            availableUsers={availableUsers}
             editable={editable}
           />
           {!editable && (
