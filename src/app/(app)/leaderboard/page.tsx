@@ -137,7 +137,8 @@ function LeaderboardTable({
     maximumFractionDigits: 2,
   });
   return (
-    <Table>
+    <div className="-mx-2 overflow-x-auto sm:mx-0">
+    <Table className="min-w-[640px]">
       <TableHeader>
         <TableRow>
           <TableHead>#</TableHead>
@@ -226,5 +227,6 @@ function LeaderboardTable({
         )}
       </TableBody>
     </Table>
+    </div>
   );
 }

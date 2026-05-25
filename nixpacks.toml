@@ -1,0 +1,15 @@
+# Nixpacks build configuration for Railway.
+# Pins Node 20 and runs the standard Next.js build pipeline.
+# Dev dependencies are installed during build, then pruned before deploy.
+
+[phases.setup]
+nixPkgs = ["nodejs_20", "openssl"]
+
+[phases.install]
+cmds = ["npm ci --include=dev"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "npm run start:prod"

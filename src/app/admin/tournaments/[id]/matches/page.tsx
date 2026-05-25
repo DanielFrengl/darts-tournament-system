@@ -5,6 +5,7 @@ import { matches, legs, players, groups } from "@/db/schema";
 import { tournamentService } from "@/lib/tournament";
 import { MatchRow, type Match as MatchVM } from "@/components/admin/MatchRow";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { WizardNav } from "@/components/admin/WizardNav";
 
 const PHASE_ORDER: Record<string, number> = {
   group: 0,
@@ -122,7 +123,10 @@ export default async function MatchesPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-baseline justify-between">
+      <WizardNav
+        back={{ href: `/admin/tournaments/${id}`, label: "Zpět na přehled" }}
+      />
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-2xl font-semibold">{t.name} — Zápasy</h1>
         <p className="text-sm text-muted-foreground">
           {finishedCount}/{vms.length} dohráno

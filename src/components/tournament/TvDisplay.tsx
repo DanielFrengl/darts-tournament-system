@@ -43,26 +43,34 @@ export function TvDisplay({
   const hasBracket = bracket.length > 0;
 
   return (
-    <div className="flex min-h-screen flex-col bg-black p-8 text-white">
-      <header className="flex items-center justify-between gap-6 border-b border-white/20 pb-4">
-        <div className="flex items-center gap-4">
+    <div className="flex min-h-screen flex-col bg-black p-4 text-white sm:p-6 lg:p-8">
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/20 pb-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={logoUrl} alt={systemName} className="h-20 w-20 object-contain" />
+          <img
+            src={logoUrl}
+            alt={systemName}
+            className="h-12 w-12 object-contain sm:h-16 sm:w-16 lg:h-20 lg:w-20"
+          />
           <div>
-            <h1 className="text-5xl font-bold tracking-tight">{tournamentName}</h1>
-            <p className="mt-1 text-sm uppercase tracking-widest text-white/60">
+            <h1 className="text-2xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
+              {tournamentName}
+            </h1>
+            <p className="mt-1 text-xs uppercase tracking-widest text-white/60 sm:text-sm">
               {systemName}
             </p>
           </div>
         </div>
         <div className="text-right">
           <p className="text-xs uppercase tracking-widest text-white/60">Probíhá</p>
-          <p className="font-mono text-5xl font-bold tabular-nums">{elapsed}</p>
+          <p className="font-mono text-3xl font-bold tabular-nums sm:text-4xl lg:text-5xl">
+            {elapsed}
+          </p>
         </div>
       </header>
 
-      <main className="grid flex-1 grid-cols-3 gap-6 py-6">
-        <section className="col-span-2 space-y-4">
+      <main className="grid flex-1 grid-cols-1 gap-6 py-6 lg:grid-cols-3">
+        <section className="space-y-4 lg:col-span-2">
           {live.length > 0 ? (
             <>
               <h2 className="text-xl font-semibold text-red-400">🔴 Živě</h2>
@@ -117,24 +125,24 @@ export function TvDisplay({
 
 function BigMatchCard({ match }: { match: MatchListItem }) {
   return (
-    <div className="rounded-2xl border border-red-500/30 bg-red-500/5 p-6">
+    <div className="rounded-2xl border border-red-500/30 bg-red-500/5 p-4 sm:p-6">
       <div className="flex items-center justify-between text-xs uppercase tracking-widest text-white/60">
         <span>
           #{match.number} · {match.phaseLabel}
         </span>
         <span>best of {match.bestOf}</span>
       </div>
-      <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-6">
+      <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:mt-4 sm:gap-6">
         <p
-          className={`truncate text-right text-3xl ${match.winnerSide === "A" ? "font-bold" : ""}`}
+          className={`truncate text-right text-lg sm:text-2xl lg:text-3xl ${match.winnerSide === "A" ? "font-bold" : ""}`}
         >
           {match.playerA}
         </p>
-        <p className="font-mono text-6xl font-bold tabular-nums">
+        <p className="font-mono text-3xl font-bold tabular-nums sm:text-5xl lg:text-6xl">
           {match.scoreA} <span className="text-white/40">:</span> {match.scoreB}
         </p>
         <p
-          className={`truncate text-left text-3xl ${match.winnerSide === "B" ? "font-bold" : ""}`}
+          className={`truncate text-left text-lg sm:text-2xl lg:text-3xl ${match.winnerSide === "B" ? "font-bold" : ""}`}
         >
           {match.playerB}
         </p>

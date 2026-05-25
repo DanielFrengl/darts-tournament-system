@@ -7,6 +7,7 @@ import { tournamentService } from "@/lib/tournament";
 import { playerService } from "@/lib/player";
 import { matchService } from "@/lib/match";
 import { TournamentControls } from "@/components/admin/TournamentControls";
+import { WizardNav } from "@/components/admin/WizardNav";
 
 export default async function AdminTournamentDetail({
   params,
@@ -26,12 +27,15 @@ export default async function AdminTournamentDetail({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <WizardNav
+        back={{ href: "/admin/tournaments", label: "Zpět na turnaje" }}
+      />
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold">{t.name}</h1>
         <Badge variant="outline">{t.status}</Badge>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button variant="outline" render={<Link href={`/admin/tournaments/${id}/players`}>Hráči ({players.length})</Link>} />
         <Button variant="outline" render={<Link href={`/admin/tournaments/${id}/matches`}>Zápasy</Link>} />
       </div>

@@ -1,19 +1,40 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Home, Trophy, Receipt, Award, Shield, Settings } from "lucide-react";
+import { Home, Trophy, Receipt, Award, Shield, Settings, Users, FileText } from "lucide-react";
 
-export function Sidebar({
+type Role = "user" | "admin";
+
+type NavItem = { href: string; label: string; icon: ReactNode };
+
+const userItems: NavItem[] = [
+  { href: "/", label: "Dashboard", icon: <Home className="h-4 w-4" /> },
+  { href: "/tournament", label: "Turnaj", icon: <Trophy className="h-4 w-4" /> },
+  { href: "/bets", label: "Moje sázky", icon: <Receipt className="h-4 w-4" /> },
+  { href: "/leaderboard", label: "Žebříček", icon: <Award className="h-4 w-4" /> },
+];
+
+const adminItems: NavItem[] = [
+  { href: "/admin", label: "Přehled", icon: <Shield className="h-4 w-4" /> },
+  { href: "/admin/tournaments", label: "Turnaje", icon: <Trophy className="h-4 w-4" /> },
+  { href: "/admin/users", label: "Uživatelé", icon: <Users className="h-4 w-4" /> },
+  { href: "/admin/audit", label: "Audit log", icon: <FileText className="h-4 w-4" /> },
+  { href: "/admin/settings", label: "Nastavení", icon: <Settings className="h-4 w-4" /> },
+];
+
+export function SidebarNav({
   role,
   systemName,
   logoUrl,
+  onNavigate,
 }: {
-  role: "user" | "admin";
+  role: Role;
   systemName: string;
   logoUrl: string;
+  onNavigate?: () => void;
 }) {
   return (
-    <aside className="flex w-56 flex-col gap-2 border-r p-4">
-      <Link href="/" className="mb-6 flex items-center gap-2">
+    <div className="flex h-full flex-col gap-2 p-4">
+      <Link href="/" onClick={onNavigate} className="mb-6 flex items-center gap-2">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={logoUrl}
@@ -23,14 +44,9 @@ export function Sidebar({
         <span className="truncate text-base font-bold leading-tight">{systemName}</span>
       </Link>
       <nav className="space-y-1">
-        <SidebarLink href="/" icon={<Home className="h-4 w-4" />} label="Dashboard" />
-        <SidebarLink href="/tournament" icon={<Trophy className="h-4 w-4" />} label="Turnaj" />
-        <SidebarLink href="/bets" icon={<Receipt className="h-4 w-4" />} label="Moje sázky" />
-        <SidebarLink
-          href="/leaderboard"
-          icon={<Award className="h-4 w-4" />}
-          label="Žebříček"
-        />
+        {userItems.map((item) => (
+          <SidebarLink key={item.href} {...item} onNavigate={onNavigate} />
+        ))}
       </nav>
       {role === "admin" && (
         <>
@@ -39,34 +55,20 @@ export function Sidebar({
             Admin
           </p>
           <nav className="space-y-1">
-            <SidebarLink
-              href="/admin"
-              icon={<Shield className="h-4 w-4" />}
-              label="Přehled"
-            />
-            <SidebarLink
-              href="/admin/tournaments"
-              icon={<Trophy className="h-4 w-4" />}
-              label="Turnaje"
-            />
-            <SidebarLink
-              href="/admin/users"
-              icon={<Home className="h-4 w-4" />}
-              label="Uživatelé"
-            />
-            <SidebarLink
-              href="/admin/audit"
-              icon={<Receipt className="h-4 w-4" />}
-              label="Audit log"
-            />
-            <SidebarLink
-              href="/admin/settings"
-              icon={<Settings className="h-4 w-4" />}
-              label="Nastavení"
-            />
+            {adminItems.map((item) => (
+              <SidebarLink key={item.href} {...item} onNavigate={onNavigate} />
+            ))}
           </nav>
         </>
       )}
+    </div>
+  );
+}
+
+export function Sidebar(props: { role: Role; systemName: string; logoUrl: string }) {
+  return (
+    <aside className="hidden w-56 shrink-0 border-r md:flex md:flex-col">
+      <SidebarNav {...props} />
     </aside>
   );
 }
@@ -75,15 +77,13 @@ function SidebarLink({
   href,
   icon,
   label,
-}: {
-  href: string;
-  icon: ReactNode;
-  label: string;
-}) {
+  onNavigate,
+}: NavItem & { onNavigate?: () => void }) {
   return (
     <Link
       href={href}
-      className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
+      onClick={onNavigate}
+      className="flex items-center gap-2 rounded px-2 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
     >
       {icon}
       {label}

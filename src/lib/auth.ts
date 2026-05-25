@@ -7,6 +7,9 @@ import { verifyPassword } from "@/lib/password";
 import { LoginSchema } from "@/lib/validation";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Required behind a reverse proxy (Railway, Fly, etc.) so NextAuth
+  // honors X-Forwarded-Host / X-Forwarded-Proto.
+  trustHost: true,
   session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 7 },
   pages: { signIn: "/login" },
   providers: [

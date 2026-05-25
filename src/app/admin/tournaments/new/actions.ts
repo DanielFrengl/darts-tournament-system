@@ -71,5 +71,5 @@ export async function createTournamentAndRedirect(formData: FormData) {
   if (!result.ok) {
     throw new Error(result.error);
   }
-  redirect(`/admin/tournaments/${result.id}`);
+  redirect(`/admin/tournaments/${result.id}/players`);
 }

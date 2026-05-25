@@ -143,11 +143,18 @@ npm run lint           # eslint
 npm run type-check     # tsc --noEmit
 ```
 
-## Deploying to Vercel
+## Deploying
 
-Tested-but-not-bulletproof. See `DEVELOPMENT.md` for the Vercel +
-Neon path. The in-process event bus needs swapping for Pusher/Ably/
-Upstash before multi-instance prod.
+**Railway (recommended)** — see [`DEPLOY.md`](./DEPLOY.md) for a complete
+walkthrough using the Railway CLI. The repo ships with `railway.json`,
+`nixpacks.toml`, `scripts/migrate.mjs`, and `/api/health` preconfigured;
+migrations run automatically before each boot.
+
+**Vercel** — works but not exhaustively tested. See `DEVELOPMENT.md`
+for the Vercel + Neon path.
+
+Either way: the in-process event bus needs swapping for Pusher/Ably/
+Upstash before scaling to multiple instances.
 
 ## License
 
