@@ -17,7 +17,6 @@ export function TvDisplay({
   startedAt,
   matches,
   bracket,
-  initialFactIndex,
 }: {
   tournamentId: string;
   tournamentName: string;
@@ -26,7 +25,6 @@ export function TvDisplay({
   startedAt: string | null;
   matches: MatchListItem[];
   bracket: BracketMatchVM[];
-  initialFactIndex: number;
 }) {
   const router = useRouter();
   useLive([`tournament:${tournamentId}`], () => router.refresh());
@@ -36,6 +34,7 @@ export function TvDisplay({
   }, [router]);
 
   const elapsed = useElapsed(startedAt);
+  const [initialFactIndex] = useState(() => Math.floor(Date.now() / 12_000));
   const factIndex = useRotatingIndex(initialFactIndex, DARTS_FACTS.length, 12_000);
   const fact = DARTS_FACTS[factIndex];
 
