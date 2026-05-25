@@ -18,11 +18,9 @@ import {
 export function UserMenu({
   username,
   avatarUrl,
-  role,
 }: {
   username: string;
   avatarUrl: string | null;
-  role: "user" | "admin";
 }) {
   const router = useRouter();
   return (
@@ -47,11 +45,6 @@ export function UserMenu({
         <DropdownMenuLinkItem closeOnClick render={<Link href="/settings" />}>
           Nastavení
         </DropdownMenuLinkItem>
-        {role === "admin" && (
-          <DropdownMenuLinkItem closeOnClick render={<Link href="/admin" />}>
-            Admin
-          </DropdownMenuLinkItem>
-        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={async () => {

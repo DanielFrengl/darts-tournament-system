@@ -7,33 +7,23 @@ import { db } from "@/db/client";
 import { users, tournaments, matches, markets, bets, players } from "@/db/schema";
 import { tournamentService } from "@/lib/tournament";
 
-async function countOf(query: Promise<{ value: number }[]>): Promise<number> {
-  const rows = await query;
-  return Number(rows[0]?.value ?? 0);
-}
-
-async function sumOf(query: Promise<{ value: string | null }[]>): Promise<number> {
-  const rows = await query;
-  return Number(rows[0]?.value ?? 0);
-}
-
 export default async function AdminDashboard() {
-  const userCount = await countOf(db.select({ value: count() }).from(users));
-  const tournamentCount = await countOf(db.select({ value: count() }).from(tournaments));
+  const [{ value: userCount }] = await db.select({ value: count() }).from(users);
+  const [{ value: tournamentCount }] = await db.select({ value: count() }).from(tournaments);
   const t = await tournamentService.getActive();
 
-  const betsToday = await countOf(
-    db.select({ value: count() }).from(bets).where(gte(bets.placedAt, startOfToday()))
-  );
-  const stakeToday = await sumOf(
-    db.select({ value: sum(bets.stake) }).from(bets).where(gte(bets.placedAt, startOfToday()))
-  );
-  const payoutToday = await sumOf(
-    db
-      .select({ value: sum(bets.payout) })
-      .from(bets)
-      .where(and(gte(bets.placedAt, startOfToday()), eq(bets.status, "won")))
-  );
+  const [{ value: betsToday }] = await db
+    .select({ value: count() })
+    .from(bets)
+    .where(gte(bets.placedAt, startOfToday()));
+  const [{ value: stakeToday }] = await db
+    .select({ value: sum(bets.stake) })
+    .from(bets)
+    .where(gte(bets.placedAt, startOfToday()));
+  const [{ value: payoutToday }] = await db
+    .select({ value: sum(bets.payout) })
+    .from(bets)
+    .where(and(gte(bets.placedAt, startOfToday()), eq(bets.status, "won")));
 
   let activeStats: {
     name: string;
@@ -44,40 +34,35 @@ export default async function AdminDashboard() {
     openMarkets: number;
     matchesLive: number;
   } | null = null;
-
   if (t) {
-    const playerCount = await countOf(
-      db.select({ value: count() }).from(players).where(eq(players.tournamentId, t.id))
-    );
-    const matchesTotal = await countOf(
-      db.select({ value: count() }).from(matches).where(eq(matches.tournamentId, t.id))
-    );
-    const matchesDone = await countOf(
-      db
-        .select({ value: count() })
-        .from(matches)
-        .where(and(eq(matches.tournamentId, t.id), eq(matches.status, "finished")))
-    );
-    const matchesLive = await countOf(
-      db
-        .select({ value: count() })
-        .from(matches)
-        .where(and(eq(matches.tournamentId, t.id), eq(matches.status, "live")))
-    );
-    const openMarkets = await countOf(
-      db
-        .select({ value: count() })
-        .from(markets)
-        .where(and(eq(markets.tournamentId, t.id), eq(markets.status, "open")))
-    );
+    const [{ value: playerCount }] = await db
+      .select({ value: count() })
+      .from(players)
+      .where(eq(players.tournamentId, t.id));
+    const [{ value: matchesTotal }] = await db
+      .select({ value: count() })
+      .from(matches)
+      .where(eq(matches.tournamentId, t.id));
+    const [{ value: matchesDone }] = await db
+      .select({ value: count() })
+      .from(matches)
+      .where(and(eq(matches.tournamentId, t.id), eq(matches.status, "finished")));
+    const [{ value: matchesLive }] = await db
+      .select({ value: count() })
+      .from(matches)
+      .where(and(eq(matches.tournamentId, t.id), eq(matches.status, "live")));
+    const [{ value: openMarkets }] = await db
+      .select({ value: count() })
+      .from(markets)
+      .where(and(eq(markets.tournamentId, t.id), eq(markets.status, "open")));
     activeStats = {
       name: t.name,
       status: t.status,
-      players: playerCount,
-      matchesDone,
-      matchesTotal,
-      openMarkets,
-      matchesLive,
+      players: Number(playerCount),
+      matchesDone: Number(matchesDone),
+      matchesTotal: Number(matchesTotal),
+      openMarkets: Number(openMarkets),
+      matchesLive: Number(matchesLive),
     };
   }
 
@@ -96,8 +81,8 @@ export default async function AdminDashboard() {
         <Stat label="Sázek dnes" value={String(betsToday)} />
         <Stat
           label="Obrat dnes"
-          value={fmt.format(stakeToday)}
-          sub={`Vyplaceno: ${fmt.format(payoutToday)}`}
+          value={fmt.format(Number(stakeToday ?? 0))}
+          sub={`Vyplaceno: ${fmt.format(Number(payoutToday ?? 0))}`}
         />
       </div>
 
@@ -119,11 +104,7 @@ export default async function AdminDashboard() {
               <Stat
                 label="Zápasy"
                 value={`${activeStats.matchesDone}/${activeStats.matchesTotal}`}
-                sub={
-                  activeStats.matchesLive > 0
-                    ? `${activeStats.matchesLive} živě`
-                    : undefined
-                }
+                sub={activeStats.matchesLive > 0 ? `${activeStats.matchesLive} živě` : undefined}
               />
               <Stat label="Otevřené trhy" value={String(activeStats.openMarkets)} />
             </div>

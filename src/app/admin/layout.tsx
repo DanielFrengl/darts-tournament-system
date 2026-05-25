@@ -1,38 +1,39 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import Link from "next/link";
+import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
+import { db } from "@/db/client";
+import { users } from "@/db/schema";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { UserMenu } from "@/components/layout/UserMenu";
+import { CapitalDisplay } from "@/components/user/CapitalDisplay";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await auth();
   if (!session?.user) redirect("/login");
   if (session.user.role !== "admin") redirect("/");
 
+  const [me] = await db
+    .select({
+      username: users.username,
+      avatarUrl: users.avatarUrl,
+      capital: users.capital,
+      role: users.role,
+    })
+    .from(users)
+    .where(eq(users.id, session.user.id));
+  if (!me) redirect("/login");
+
   return (
     <div className="flex min-h-screen">
-      <aside className="w-56 space-y-1 border-r p-4">
-        <h2 className="mb-4 text-lg font-bold">Admin</h2>
-        <Link href="/admin" className="block rounded px-2 py-1.5 text-sm hover:bg-accent">
-          Dashboard
-        </Link>
-        <Link
-          href="/admin/tournaments"
-          className="block rounded px-2 py-1.5 text-sm hover:bg-accent"
-        >
-          Turnaje
-        </Link>
-        <Link href="/admin/users" className="block rounded px-2 py-1.5 text-sm hover:bg-accent">
-          Uživatelé
-        </Link>
-        <Link href="/admin/audit" className="block rounded px-2 py-1.5 text-sm hover:bg-accent">
-          Audit log
-        </Link>
-        <div className="my-3 border-t" />
-        <Link href="/" className="block rounded px-2 py-1.5 text-sm hover:bg-accent">
-          ← Zpět do aplikace
-        </Link>
-      </aside>
-      <main className="flex-1 p-6">{children}</main>
+      <Sidebar role={me.role} />
+      <div className="flex flex-1 flex-col">
+        <header className="flex items-center justify-end gap-4 border-b p-4">
+          <CapitalDisplay capital={me.capital} />
+          <UserMenu username={me.username} avatarUrl={me.avatarUrl} />
+        </header>
+        <main className="flex-1 p-6">{children}</main>
+      </div>
     </div>
   );
 }

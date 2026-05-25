@@ -26,11 +26,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar />
+      <Sidebar role={me.role} />
       <div className="flex flex-1 flex-col">
         <header className="flex items-center justify-end gap-4 border-b p-4">
           <CapitalDisplay capital={me.capital} />
-          <UserMenu username={me.username} avatarUrl={me.avatarUrl} role={me.role} />
+          <UserMenu username={me.username} avatarUrl={me.avatarUrl} />
         </header>
         <main className="flex-1 p-6">{children}</main>
       </div>

@@ -6,6 +6,14 @@ import { tournamentService } from "@/lib/tournament";
 import { MatchRow, type Match as MatchVM } from "@/components/admin/MatchRow";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+const PHASE_ORDER: Record<string, number> = {
+  group: 0,
+  quarter: 1,
+  semi: 2,
+  third_place: 3,
+  final: 4,
+};
+
 export default async function MatchesPage({
   params,
 }: {
@@ -15,11 +23,18 @@ export default async function MatchesPage({
   const t = await tournamentService.get(id);
   if (!t) notFound();
 
+  const groupRows = await db
+    .select()
+    .from(groups)
+    .where(eq(groups.tournamentId, id))
+    .orderBy(asc(groups.position));
+  const groupMap = new Map(groupRows.map((g) => [g.id, g]));
+  const groupPos = new Map(groupRows.map((g) => [g.id, g.position]));
+
   const allMatches = await db
     .select()
     .from(matches)
-    .where(eq(matches.tournamentId, id))
-    .orderBy(asc(matches.phase), asc(matches.bracketRound), asc(matches.bracketPosition));
+    .where(eq(matches.tournamentId, id));
 
   const playerIds = Array.from(
     new Set(
@@ -48,22 +63,33 @@ export default async function MatchesPage({
     legsByMatch.set(l.matchId, arr);
   }
 
-  const groupRows = await db
-    .select()
-    .from(groups)
-    .where(eq(groups.tournamentId, id))
-    .orderBy(asc(groups.position));
-  const groupMap = new Map(groupRows.map((g) => [g.id, g]));
+  // Global play order
+  const sorted = [...allMatches].sort((a, b) => {
+    const phase = (PHASE_ORDER[a.phase] ?? 99) - (PHASE_ORDER[b.phase] ?? 99);
+    if (phase !== 0) return phase;
+    if (a.groupId && b.groupId) {
+      const g = (groupPos.get(a.groupId) ?? 0) - (groupPos.get(b.groupId) ?? 0);
+      if (g !== 0) return g;
+    }
+    const r = (a.bracketRound ?? 0) - (b.bracketRound ?? 0);
+    if (r !== 0) return r;
+    return (a.bracketPosition ?? 0) - (b.bracketPosition ?? 0);
+  });
+  const numberById = new Map(sorted.map((m, i) => [m.id, i + 1]));
 
-  const vms: (MatchVM & { groupName: string | null })[] = allMatches.map((m) => ({
+  const vms: (MatchVM & { groupName: string | null; number: number })[] = sorted.map((m) => ({
     id: m.id,
     phase: m.phase,
     bestOf: m.bestOf,
     status: m.status,
     scoreA: m.scoreA,
     scoreB: m.scoreB,
-    playerA: m.playerAId ? { id: m.playerAId, name: playerMap.get(m.playerAId)!.name } : null,
-    playerB: m.playerBId ? { id: m.playerBId, name: playerMap.get(m.playerBId)!.name } : null,
+    playerA: m.playerAId
+      ? { id: m.playerAId, name: playerMap.get(m.playerAId)!.name }
+      : null,
+    playerB: m.playerBId
+      ? { id: m.playerBId, name: playerMap.get(m.playerBId)!.name }
+      : null,
     winnerId: m.winnerId,
     legs: (legsByMatch.get(m.id) ?? []).map((l) => ({
       id: l.id,
@@ -71,7 +97,8 @@ export default async function MatchesPage({
       status: l.status,
       winnerId: l.winnerId,
     })),
-    groupName: m.groupId ? (groupMap.get(m.groupId)?.name ?? null) : null,
+    groupName: m.groupId ? groupMap.get(m.groupId)?.name ?? null : null,
+    number: numberById.get(m.id)!,
   }));
 
   const groupMatches = vms.filter((m) => m.phase === "group");
@@ -90,9 +117,18 @@ export default async function MatchesPage({
     if (arr.length > 0) playoffByPhase.set(phase, arr);
   }
 
+  const finishedCount = vms.filter((m) => m.status === "finished").length;
+  const liveCount = vms.filter((m) => m.status === "live").length;
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">{t.name} — Zápasy</h1>
+      <div className="flex items-baseline justify-between">
+        <h1 className="text-2xl font-semibold">{t.name} — Zápasy</h1>
+        <p className="text-sm text-muted-foreground">
+          {finishedCount}/{vms.length} dohráno
+          {liveCount > 0 && <span className="text-foreground"> · {liveCount} živě</span>}
+        </p>
+      </div>
       {[...groupedByGroup.entries()].map(([name, ms]) => (
         <Card key={`group-${name}`}>
           <CardHeader>
@@ -100,7 +136,7 @@ export default async function MatchesPage({
           </CardHeader>
           <CardContent className="space-y-3">
             {ms.map((m) => (
-              <MatchRow key={m.id} tournamentId={id} match={m} />
+              <MatchRow key={m.id} tournamentId={id} match={m} number={m.number} />
             ))}
           </CardContent>
         </Card>
@@ -112,7 +148,7 @@ export default async function MatchesPage({
           </CardHeader>
           <CardContent className="space-y-3">
             {ms.map((m) => (
-              <MatchRow key={m.id} tournamentId={id} match={m} />
+              <MatchRow key={m.id} tournamentId={id} match={m} number={m.number} />
             ))}
           </CardContent>
         </Card>

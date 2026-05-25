@@ -34,9 +34,11 @@ export type Match = {
 export function MatchRow({
   tournamentId,
   match,
+  number,
 }: {
   tournamentId: string;
   match: Match;
+  number?: number;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -91,6 +93,11 @@ export function MatchRow({
     <div className="space-y-3 rounded border p-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm">
+          {number != null && (
+            <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
+              #{number}
+            </span>
+          )}
           <Badge variant="outline">{match.phase}</Badge>
           <Badge variant={isLive ? "default" : "secondary"}>{match.status}</Badge>
           <span className="text-muted-foreground">best of {match.bestOf}</span>

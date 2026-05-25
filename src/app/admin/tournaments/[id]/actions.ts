@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { players, matches } from "@/db/schema";
+import { players, matches, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { tournamentService } from "@/lib/tournament";
 import { matchService } from "@/lib/match";
 import { bracketService } from "@/lib/bracket";
 import { marketService } from "@/lib/market";
 import { bettingService } from "@/lib/betting";
+import { capitalService } from "@/lib/capital";
 import { onMatchesCreated } from "@/lib/match-lifecycle";
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -17,6 +18,12 @@ type Result = { ok: true } | { ok: false; error: string };
 async function requireAdmin(): Promise<boolean> {
   const session = await auth();
   return session?.user?.role === "admin";
+}
+
+async function currentAdminId(): Promise<string | null> {
+  const session = await auth();
+  if (session?.user?.role === "admin") return session.user.id;
+  return null;
 }
 
 export async function startGroups(tournamentId: string): Promise<Result> {
@@ -45,11 +52,30 @@ export async function startGroups(tournamentId: string): Promise<Result> {
     const groupMatches = await matchService.listGroupMatches(tournamentId);
     await onMatchesCreated(groupMatches.map((m) => m.id));
     await marketService.createTournamentWinner(tournamentId);
+    const adminId = await currentAdminId();
+    if (adminId) await grantStartingCapital(cfg.startingCapital, adminId);
     revalidatePath(`/admin/tournaments/${tournamentId}`);
     revalidatePath("/tournament");
+    revalidatePath("/");
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
+/**
+ * Top up every user whose capital is below the tournament's starting
+ * amount so they have funds to bet. Doesn't touch users already above
+ * the threshold (they came in from a prior tournament with profit).
+ */
+async function grantStartingCapital(target: number, adminId: string): Promise<void> {
+  if (!target || target <= 0) return;
+  const allUsers = await db.select({ id: users.id, capital: users.capital }).from(users);
+  for (const u of allUsers) {
+    const current = Number(u.capital);
+    if (current >= target) continue;
+    const diff = target - current;
+    await capitalService.adminAdjust(u.id, diff, "Startovní kapitál pro turnaj", adminId);
   }
 }
 
