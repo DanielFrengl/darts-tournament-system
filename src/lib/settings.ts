@@ -8,6 +8,7 @@ const DEFAULTS: Omit<AppSettings, "updatedAt"> = {
   id: 1,
   name: "Jabloňová Open",
   logoUrl: "/logo.png",
+  inviteCode: "darts",
 };
 
 /**
@@ -32,6 +33,7 @@ export const getAppSettings = cache(async (): Promise<AppSettings> => {
 export async function updateAppSettings(input: {
   name?: string;
   logoUrl?: string;
+  inviteCode?: string;
 }): Promise<void> {
   const patch: Partial<typeof appSettings.$inferInsert> = { updatedAt: new Date() };
   if (input.name !== undefined) {
@@ -42,8 +44,30 @@ export async function updateAppSettings(input: {
     if (!/^(https?:\/\/|\/)/.test(input.logoUrl)) throw new Error("invalid logo URL");
     patch.logoUrl = input.logoUrl;
   }
+  if (input.inviteCode !== undefined) {
+    const trimmed = input.inviteCode.trim();
+    if (trimmed.length < 3) throw new Error("invite code must be at least 3 chars");
+    if (trimmed.length > 64) throw new Error("invite code too long");
+    patch.inviteCode = trimmed;
+  }
   await db
     .insert(appSettings)
     .values({ ...DEFAULTS, ...patch })
     .onConflictDoUpdate({ target: appSettings.id, set: patch });
 }
+
+const INVITE_COOKIE = "darts_invite";
+
+export async function verifyInviteCode(code: string): Promise<boolean> {
+  const settings = await getAppSettings();
+  // Constant-time-ish compare for the small string; full timing safety
+  // isn't critical here (invite codes are low-entropy by design).
+  if (code.length !== settings.inviteCode.length) return false;
+  let ok = 1;
+  for (let i = 0; i < code.length; i++) {
+    if (code.charCodeAt(i) !== settings.inviteCode.charCodeAt(i)) ok = 0;
+  }
+  return ok === 1;
+}
+
+export { INVITE_COOKIE };

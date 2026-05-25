@@ -1,0 +1,1 @@
+ALTER TABLE "app_settings" ADD COLUMN "invite_code" varchar(64) DEFAULT 'darts' NOT NULL;

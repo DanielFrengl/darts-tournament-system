@@ -15,6 +15,7 @@ export default async function AdminSettingsPage() {
           <SystemSettingsForm
             initialName={settings.name}
             initialLogoUrl={settings.logoUrl}
+            initialInviteCode={settings.inviteCode}
           />
         </CardContent>
       </Card>
