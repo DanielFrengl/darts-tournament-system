@@ -4,11 +4,14 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users } from "@/db/schema";
 import { hashPassword } from "@/lib/password";
+import { verifyInviteCode } from "@/lib/settings";
 import { RegisterSchema, type RegisterInput } from "@/lib/validation";
 
 export type RegisterResult = { ok: true; userId: string } | { ok: false; error: string };
 
-export async function registerUser(input: RegisterInput): Promise<RegisterResult> {
+export async function registerUser(
+  input: RegisterInput & { inviteCode: string }
+): Promise<RegisterResult> {
   const parsed = RegisterSchema.safeParse(input);
   if (!parsed.success) {
     return {
@@ -17,6 +20,11 @@ export async function registerUser(input: RegisterInput): Promise<RegisterResult
     };
   }
   const { email, username, password } = parsed.data;
+
+  const code = (input.inviteCode ?? "").trim();
+  if (!code) return { ok: false, error: "Zadej zvací kód." };
+  const codeOk = await verifyInviteCode(code);
+  if (!codeOk) return { ok: false, error: "Neplatný zvací kód." };
 
   const [existingEmail] = await db
     .select({ id: users.id })

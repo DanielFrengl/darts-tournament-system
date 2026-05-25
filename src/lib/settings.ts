@@ -56,8 +56,6 @@ export async function updateAppSettings(input: {
     .onConflictDoUpdate({ target: appSettings.id, set: patch });
 }
 
-const INVITE_COOKIE = "darts_invite";
-
 export async function verifyInviteCode(code: string): Promise<boolean> {
   const settings = await getAppSettings();
   // Constant-time-ish compare for the small string; full timing safety
@@ -69,5 +67,3 @@ export async function verifyInviteCode(code: string): Promise<boolean> {
   }
   return ok === 1;
 }
-
-export { INVITE_COOKIE };

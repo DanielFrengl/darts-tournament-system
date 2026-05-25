@@ -20,6 +20,7 @@ export function RegisterForm() {
       email: String(formData.get("email") ?? ""),
       username: String(formData.get("username") ?? ""),
       password: String(formData.get("password") ?? ""),
+      inviteCode: String(formData.get("inviteCode") ?? ""),
     };
     start(async () => {
       const result = await registerUser(input);
@@ -69,6 +70,16 @@ export function RegisterForm() {
           required
           autoComplete="new-password"
           minLength={8}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="inviteCode">Zvací kód</Label>
+        <Input
+          id="inviteCode"
+          name="inviteCode"
+          required
+          autoComplete="off"
+          placeholder="kód od pořadatele"
         />
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
