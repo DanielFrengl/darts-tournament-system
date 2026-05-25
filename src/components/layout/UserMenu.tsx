@@ -41,14 +41,14 @@ export function UserMenu({
           <DropdownMenuLabel>{username}</DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuLinkItem render={<Link href={`/u/${username}`} />}>
+        <DropdownMenuLinkItem closeOnClick render={<Link href={`/u/${username}`} />}>
           Můj profil
         </DropdownMenuLinkItem>
-        <DropdownMenuLinkItem render={<Link href="/settings" />}>
+        <DropdownMenuLinkItem closeOnClick render={<Link href="/settings" />}>
           Nastavení
         </DropdownMenuLinkItem>
         {role === "admin" && (
-          <DropdownMenuLinkItem render={<Link href="/admin" />}>
+          <DropdownMenuLinkItem closeOnClick render={<Link href="/admin" />}>
             Admin
           </DropdownMenuLinkItem>
         )}
