@@ -18,7 +18,8 @@ export function RegisterForm() {
     setError(null);
     const input = {
       email: String(formData.get("email") ?? ""),
-      username: String(formData.get("username") ?? ""),
+      firstName: String(formData.get("firstName") ?? ""),
+      lastName: String(formData.get("lastName") ?? ""),
       password: String(formData.get("password") ?? ""),
       inviteCode: String(formData.get("inviteCode") ?? ""),
     };
@@ -34,7 +35,7 @@ export function RegisterForm() {
         redirect: false,
       });
       if (signInResult?.error) {
-        setError("Registered, but auto-login failed. Please log in.");
+        setError("Účet vytvořen, ale automatické přihlášení selhalo. Přihlas se ručně.");
         router.push("/login");
         return;
       }
@@ -46,20 +47,31 @@ export function RegisterForm() {
 
   return (
     <form action={onSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="firstName">Jméno</Label>
+          <Input
+            id="firstName"
+            name="firstName"
+            required
+            autoComplete="given-name"
+            maxLength={60}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="lastName">Příjmení</Label>
+          <Input
+            id="lastName"
+            name="lastName"
+            required
+            autoComplete="family-name"
+            maxLength={60}
+          />
+        </div>
+      </div>
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input id="email" name="email" type="email" required autoComplete="email" />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="username">Username</Label>
-        <Input
-          id="username"
-          name="username"
-          required
-          autoComplete="username"
-          minLength={3}
-          maxLength={20}
-        />
       </div>
       <div className="space-y-2">
         <Label htmlFor="password">Heslo</Label>

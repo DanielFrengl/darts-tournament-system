@@ -17,12 +17,20 @@ import {
 
 export function UserMenu({
   username,
+  displayName,
   avatarUrl,
 }: {
   username: string;
+  displayName: string;
   avatarUrl: string | null;
 }) {
   const router = useRouter();
+  const initials = displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((s) => s[0]!.toUpperCase())
+    .join("");
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -30,13 +38,20 @@ export function UserMenu({
         className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <Avatar>
-          {avatarUrl && <AvatarImage src={avatarUrl} alt={username} />}
-          <AvatarFallback>{username.slice(0, 2).toUpperCase()}</AvatarFallback>
+          {avatarUrl && <AvatarImage src={avatarUrl} alt={displayName} />}
+          <AvatarFallback>{initials || username.slice(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuGroup>
-          <DropdownMenuLabel>{username}</DropdownMenuLabel>
+          <DropdownMenuLabel>
+            <div className="flex flex-col">
+              <span className="font-semibold">{displayName}</span>
+              <span className="text-xs font-normal text-muted-foreground">
+                @{username}
+              </span>
+            </div>
+          </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuLinkItem closeOnClick render={<Link href={`/u/${username}`} />}>

@@ -59,12 +59,15 @@ export class PlayerService {
     if (existing.length > 0) {
       throw new Error("Tento uživatel už je v turnaji přidán");
     }
+    const fn = (u.firstName ?? "").trim();
+    const ln = (u.lastName ?? "").trim();
+    const fullName = `${fn} ${ln}`.trim();
     const [row] = await this.db
       .insert(players)
       .values({
         tournamentId,
         userId: u.id,
-        name: u.username,
+        name: fullName.length > 0 ? fullName : u.username,
         avatarUrl: u.avatarUrl,
       })
       .returning();

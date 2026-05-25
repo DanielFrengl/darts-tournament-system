@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users } from "@/db/schema";
+import { displayName } from "@/lib/names";
 import { ProfileCard } from "@/components/user/ProfileCard";
 
 export default async function UserProfilePage({
@@ -13,6 +14,8 @@ export default async function UserProfilePage({
   const [user] = await db
     .select({
       username: users.username,
+      firstName: users.firstName,
+      lastName: users.lastName,
       avatarUrl: users.avatarUrl,
       bio: users.bio,
       capital: users.capital,
@@ -25,7 +28,7 @@ export default async function UserProfilePage({
 
   return (
     <div className="max-w-2xl">
-      <ProfileCard {...user} />
+      <ProfileCard {...user} displayName={displayName(user)} />
     </div>
   );
 }

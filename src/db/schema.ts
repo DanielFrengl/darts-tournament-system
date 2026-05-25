@@ -73,7 +73,9 @@ export const betStatusEnum = pgEnum("bet_status", [
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: varchar("email", { length: 255 }).notNull().unique(),
-  username: varchar("username", { length: 20 }).notNull().unique(),
+  username: varchar("username", { length: 40 }).notNull().unique(),
+  firstName: varchar("first_name", { length: 60 }).notNull().default(""),
+  lastName: varchar("last_name", { length: 60 }).notNull().default(""),
   passwordHash: text("password_hash").notNull(),
   avatarUrl: text("avatar_url"),
   bio: text("bio"),

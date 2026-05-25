@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Home, Trophy, Receipt, Award, Shield, Settings, Users, FileText } from "lucide-react";
+import { Home, Trophy, Receipt, Award, Shield, Settings, Users, FileText, Tv } from "lucide-react";
 
 type Role = "user" | "admin";
 
@@ -11,6 +11,7 @@ const userItems: NavItem[] = [
   { href: "/tournament", label: "Turnaj", icon: <Trophy className="h-4 w-4" /> },
   { href: "/bets", label: "Moje sázky", icon: <Receipt className="h-4 w-4" /> },
   { href: "/leaderboard", label: "Žebříček", icon: <Award className="h-4 w-4" /> },
+  { href: "/display", label: "TV Display", icon: <Tv className="h-4 w-4" /> },
 ];
 
 const adminItems: NavItem[] = [

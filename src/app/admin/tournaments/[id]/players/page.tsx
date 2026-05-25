@@ -8,6 +8,7 @@ import { tournamentService } from "@/lib/tournament";
 import { playerService } from "@/lib/player";
 import { PlayerManager } from "@/components/admin/PlayerManager";
 import { WizardNav } from "@/components/admin/WizardNav";
+import { displayName } from "@/lib/names";
 import { ensureGroupsForTournament } from "./actions";
 
 export default async function PlayersPage({
@@ -26,12 +27,14 @@ export default async function PlayersPage({
   const alreadyLinked = playerRows
     .map((p) => p.userId)
     .filter((x): x is string => !!x);
-  const availableUsers =
+  const availableUserRows =
     alreadyLinked.length > 0
       ? await db
           .select({
             id: users.id,
             username: users.username,
+            firstName: users.firstName,
+            lastName: users.lastName,
             avatarUrl: users.avatarUrl,
           })
           .from(users)
@@ -41,11 +44,19 @@ export default async function PlayersPage({
           .select({
             id: users.id,
             username: users.username,
+            firstName: users.firstName,
+            lastName: users.lastName,
             avatarUrl: users.avatarUrl,
           })
           .from(users)
           .orderBy(asc(users.username));
   void inArray;
+  const availableUsers = availableUserRows.map((u) => ({
+    id: u.id,
+    username: u.username,
+    displayName: displayName(u),
+    avatarUrl: u.avatarUrl,
+  }));
 
   async function createGroupsAction() {
     "use server";

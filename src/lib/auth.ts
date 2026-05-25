@@ -41,6 +41,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id as string;
         token.role = (user as { role: "user" | "admin" }).role;
+        return token;
+      }
+      // On subsequent requests, re-read the role from the DB so role
+      // promotions/demotions take effect without forcing a re-login.
+      if (token.id) {
+        const [u] = await db
+          .select({ role: users.role })
+          .from(users)
+          .where(eq(users.id, token.id as string));
+        if (u) token.role = u.role;
       }
       return token;
     },

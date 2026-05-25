@@ -53,7 +53,7 @@ export async function startGroups(tournamentId: string): Promise<Result> {
     await onMatchesCreated(groupMatches.map((m) => m.id));
     await marketService.createTournamentWinner(tournamentId);
     const adminId = await currentAdminId();
-    if (adminId) await grantStartingCapital(cfg.startingCapital, adminId);
+    if (adminId) await resetCapitalForTournament(cfg.startingCapital, adminId);
     revalidatePath(`/admin/tournaments/${tournamentId}`);
     revalidatePath("/tournament");
     revalidatePath("/");
@@ -64,18 +64,26 @@ export async function startGroups(tournamentId: string): Promise<Result> {
 }
 
 /**
- * Top up every user whose capital is below the tournament's starting
- * amount so they have funds to bet. Doesn't touch users already above
- * the threshold (they came in from a prior tournament with profit).
+ * Reset every user's capital to the tournament's starting amount. Each
+ * tournament starts everyone on a level playing field; all-time profit
+ * is tracked via the audit log / transactions, not the current balance.
  */
-async function grantStartingCapital(target: number, adminId: string): Promise<void> {
+async function resetCapitalForTournament(
+  target: number,
+  adminId: string
+): Promise<void> {
   if (!target || target <= 0) return;
   const allUsers = await db.select({ id: users.id, capital: users.capital }).from(users);
   for (const u of allUsers) {
     const current = Number(u.capital);
-    if (current >= target) continue;
     const diff = target - current;
-    await capitalService.adminAdjust(u.id, diff, "Startovní kapitál pro turnaj", adminId);
+    if (diff === 0) continue;
+    await capitalService.adminAdjust(
+      u.id,
+      diff,
+      "Reset kapitálu na začátku turnaje",
+      adminId
+    );
   }
 }
 

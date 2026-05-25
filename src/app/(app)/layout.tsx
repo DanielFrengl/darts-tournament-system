@@ -8,6 +8,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { UserMenu } from "@/components/layout/UserMenu";
 import { CapitalDisplay } from "@/components/user/CapitalDisplay";
+import { displayName } from "@/lib/names";
 import { getAppSettings } from "@/lib/settings";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
@@ -18,6 +19,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const [me] = await db
     .select({
       username: users.username,
+      firstName: users.firstName,
+      lastName: users.lastName,
       avatarUrl: users.avatarUrl,
       capital: users.capital,
       role: users.role,
@@ -48,7 +51,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           </div>
           <div className="ml-auto flex items-center gap-3 sm:gap-4">
             <CapitalDisplay capital={me.capital} />
-            <UserMenu username={me.username} avatarUrl={me.avatarUrl} />
+            <UserMenu
+              username={me.username}
+              displayName={displayName(me)}
+              avatarUrl={me.avatarUrl}
+            />
           </div>
         </header>
         <main className="flex-1 p-4 sm:p-6">{children}</main>

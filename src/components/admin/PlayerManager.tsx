@@ -24,7 +24,12 @@ type Player = {
   avatarUrl: string | null;
 };
 type Group = { id: string; name: string };
-type AvailableUser = { id: string; username: string; avatarUrl: string | null };
+type AvailableUser = {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+};
 
 type Mode = "account" | "offline";
 
@@ -148,7 +153,7 @@ export function PlayerManager({
                     <option value="">— vyber —</option>
                     {availableUsers.map((u) => (
                       <option key={u.id} value={u.id}>
-                        {u.username}
+                        {u.displayName} (@{u.username})
                       </option>
                     ))}
                   </select>

@@ -1,14 +1,21 @@
 import { z } from "zod";
 
-const usernameRegex = /^[a-zA-Z0-9_]+$/;
+const nameRegex = /^[\p{L}][\p{L}\p{M}'\- ]{0,58}[\p{L}]$|^[\p{L}]$/u;
 
 export const RegisterSchema = z.object({
   email: z.email().max(255),
-  username: z
+  firstName: z
     .string()
-    .min(3)
-    .max(20)
-    .regex(usernameRegex, "Username may only contain letters, numbers, and underscores"),
+    .trim()
+    .min(1, "Jméno je povinné")
+    .max(60)
+    .regex(nameRegex, "Neplatné jméno"),
+  lastName: z
+    .string()
+    .trim()
+    .min(1, "Příjmení je povinné")
+    .max(60)
+    .regex(nameRegex, "Neplatné příjmení"),
   password: z.string().min(8).max(200),
 });
 export type RegisterInput = z.infer<typeof RegisterSchema>;

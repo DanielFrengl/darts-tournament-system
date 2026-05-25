@@ -19,49 +19,100 @@ describe("registerUser action", () => {
   it("creates user with hashed password and admin role for first user", async () => {
     const result = await registerUser({
       email: "karel@test.cz",
-      username: "karel99",
-      password: "longenoughpw", inviteCode: "darts",
+      firstName: "Karel",
+      lastName: "Novak",
+      password: "longenoughpw",
+      inviteCode: "darts",
     });
     expect(result.ok).toBe(true);
     const [u] = await testDb.select().from(users).where(eq(users.email, "karel@test.cz"));
     expect(u).toBeDefined();
-    expect(u?.username).toBe("karel99");
+    expect(u?.username).toBe("karelnovak");
+    expect(u?.firstName).toBe("Karel");
+    expect(u?.lastName).toBe("Novak");
     expect(u?.role).toBe("admin");
     expect(await verifyPassword("longenoughpw", u!.passwordHash)).toBe(true);
   });
 
   it("second user gets role 'user'", async () => {
-    await registerUser({ email: "a@a.cz", username: "userA", password: "longenough", inviteCode: "darts" });
-    await registerUser({ email: "b@b.cz", username: "userB", password: "longenough", inviteCode: "darts" });
+    await registerUser({
+      email: "a@a.cz",
+      firstName: "Anna",
+      lastName: "A",
+      password: "longenough",
+      inviteCode: "darts",
+    });
+    await registerUser({
+      email: "b@b.cz",
+      firstName: "Bob",
+      lastName: "B",
+      password: "longenough",
+      inviteCode: "darts",
+    });
     const [u] = await testDb.select().from(users).where(eq(users.email, "b@b.cz"));
     expect(u?.role).toBe("user");
   });
 
   it("rejects duplicate email", async () => {
-    await registerUser({ email: "dup@a.cz", username: "first", password: "longenough", inviteCode: "darts" });
+    await registerUser({
+      email: "dup@a.cz",
+      firstName: "First",
+      lastName: "User",
+      password: "longenough",
+      inviteCode: "darts",
+    });
     const r = await registerUser({
       email: "dup@a.cz",
-      username: "second",
-      password: "longenough", inviteCode: "darts",
+      firstName: "Second",
+      lastName: "User",
+      password: "longenough",
+      inviteCode: "darts",
     });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toMatch(/email/i);
   });
 
-  it("rejects duplicate username", async () => {
-    await registerUser({ email: "a1@a.cz", username: "samename", password: "longenough", inviteCode: "darts" });
+  it("auto-resolves duplicate username with numeric suffix", async () => {
+    await registerUser({
+      email: "a1@a.cz",
+      firstName: "Same",
+      lastName: "Name",
+      password: "longenough",
+      inviteCode: "darts",
+    });
     const r = await registerUser({
       email: "a2@a.cz",
-      username: "samename",
-      password: "longenough", inviteCode: "darts",
+      firstName: "Same",
+      lastName: "Name",
+      password: "longenough",
+      inviteCode: "darts",
     });
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error).toMatch(/username/i);
+    expect(r.ok).toBe(true);
+    const [u] = await testDb.select().from(users).where(eq(users.email, "a2@a.cz"));
+    expect(u?.username).toBe("samename2");
   });
 
   it("rejects invalid input", async () => {
-    const r = await registerUser({ email: "bad", username: "x", password: "short", inviteCode: "darts" });
+    const r = await registerUser({
+      email: "bad",
+      firstName: "X",
+      lastName: "Y",
+      password: "short",
+      inviteCode: "darts",
+    });
     expect(r.ok).toBe(false);
+  });
+
+  it("rejects bad invite code", async () => {
+    const r = await registerUser({
+      email: "z@z.cz",
+      firstName: "Z",
+      lastName: "Z",
+      password: "longenough",
+      inviteCode: "wrong-code",
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/zvací kód/i);
   });
 });
 

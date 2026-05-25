@@ -19,6 +19,7 @@ import { CapitalAdjustDialog } from "./CapitalAdjustDialog";
 export type AdminUser = {
   id: string;
   username: string;
+  displayName: string;
   email: string;
   role: "user" | "admin";
   capital: string;
@@ -46,8 +47,8 @@ export function UserList({
   }
 
   const fmt = new Intl.NumberFormat("cs-CZ", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   });
 
   return (
@@ -55,6 +56,7 @@ export function UserList({
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>Jméno</TableHead>
             <TableHead>Username</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Role</TableHead>
@@ -65,12 +67,18 @@ export function UserList({
         <TableBody>
           {users.map((u) => (
             <TableRow key={u.id}>
-              <TableCell className="font-medium">{u.username}</TableCell>
+              <TableCell className="font-medium">{u.displayName}</TableCell>
+              <TableCell className="font-mono text-xs text-muted-foreground">
+                @{u.username}
+              </TableCell>
               <TableCell className="text-muted-foreground">{u.email}</TableCell>
               <TableCell>
                 <Badge variant={u.role === "admin" ? "default" : "secondary"}>{u.role}</Badge>
               </TableCell>
-              <TableCell className="font-mono">{fmt.format(Number(u.capital))}</TableCell>
+              <TableCell className="font-mono">
+                {fmt.format(Number(u.capital))}
+                <span className="ml-1 text-xs text-muted-foreground">Chips</span>
+              </TableCell>
               <TableCell className="space-x-2">
                 <Button size="sm" variant="outline" onClick={() => setAdjustingUser(u)}>
                   Upravit kapitál
