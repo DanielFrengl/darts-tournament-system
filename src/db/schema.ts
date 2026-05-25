@@ -52,6 +52,8 @@ export const marketTypeEnum = pgEnum("market_type", [
   "correct_score",
   "leg_winner",
   "tournament_winner",
+  "tournament_runner_up",
+  "tournament_third",
 ]);
 
 export const marketScopeEnum = pgEnum("market_scope", ["match", "leg", "tournament"]);

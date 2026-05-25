@@ -1,11 +1,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, sum } from "drizzle-orm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { db } from "@/db/client";
-import { users } from "@/db/schema";
+import {
+  bets,
+  marketSelections,
+  markets as marketsTable,
+  users,
+} from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { tournamentService } from "@/lib/tournament";
 import {
@@ -16,6 +21,7 @@ import {
 import { GroupTable } from "@/components/tournament/GroupTable";
 import { BracketView } from "@/components/tournament/BracketView";
 import { MatchListCard } from "@/components/tournament/MatchListCard";
+import { MarketCard, type MarketCardVM } from "@/components/betting/MarketCard";
 import { TournamentLiveSync } from "@/components/tournament/TournamentLiveSync";
 
 export default async function TournamentOverviewPage() {
@@ -44,6 +50,7 @@ export default async function TournamentOverviewPage() {
   const groupViews = await buildGroupViews(t.id, t.configJson);
   const bracketMatches = await buildBracketMatches(t.id);
   const matchList = await buildMatchList(t.id);
+  const futuresMarkets = await loadTournamentFutures(t.id);
   const showBracket = t.status === "playoff" || t.status === "finished";
   const live = matchList.filter((m) => m.status === "live");
   const upcoming = matchList.filter((m) => m.status === "scheduled");
@@ -139,6 +146,29 @@ export default async function TournamentOverviewPage() {
         </Card>
       )}
 
+      {futuresMarkets.length > 0 && (
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-lg font-semibold">Sázky na celý turnaj</h2>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">
+              Vítěz · 2. místo · 3. místo
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {futuresMarkets.map((vm) => (
+              <MarketCard
+                key={vm.id}
+                market={vm}
+                matchId={""}
+                capital={capital}
+                maxStakePct={maxStakePct}
+                canBet={vm.status === "open" && capital > 0}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
       {finished.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">Odehrané</h2>
@@ -157,6 +187,72 @@ export default async function TournamentOverviewPage() {
       )}
     </div>
   );
+}
+
+const TOURNAMENT_MARKET_TITLES: Record<string, string> = {
+  tournament_winner: "Vítěz turnaje",
+  tournament_runner_up: "2. místo",
+  tournament_third: "3. místo",
+};
+const TOURNAMENT_MARKET_ORDER: Record<string, number> = {
+  tournament_winner: 0,
+  tournament_runner_up: 1,
+  tournament_third: 2,
+};
+
+async function loadTournamentFutures(tournamentId: string): Promise<MarketCardVM[]> {
+  const ms = await db
+    .select()
+    .from(marketsTable)
+    .where(
+      and(
+        eq(marketsTable.tournamentId, tournamentId),
+        eq(marketsTable.scope, "tournament")
+      )
+    );
+  if (ms.length === 0) return [];
+  const marketIds = ms.map((m) => m.id);
+  const sels = await db
+    .select()
+    .from(marketSelections)
+    .where(inArray(marketSelections.marketId, marketIds));
+  const selIds = sels.map((s) => s.id);
+
+  const poolPerSel = new Map<string, number>();
+  if (selIds.length) {
+    const poolRows = await db
+      .select({ selectionId: bets.selectionId, total: sum(bets.stake) })
+      .from(bets)
+      .where(and(inArray(bets.selectionId, selIds), eq(bets.status, "open")))
+      .groupBy(bets.selectionId);
+    for (const r of poolRows) poolPerSel.set(r.selectionId, Number(r.total ?? 0));
+  }
+
+  const vms = ms.map((m) => {
+    const mySels = sels
+      .filter((s) => s.marketId === m.id)
+      .map((s) => ({
+        id: s.id,
+        label: s.label,
+        finalOdds: Number(s.finalOdds),
+        isWinner: s.isWinner ?? null,
+        pool: poolPerSel.get(s.id) ?? 0,
+      }));
+    const totalPool = mySels.reduce((a, s) => a + s.pool, 0);
+    return {
+      id: m.id,
+      title: TOURNAMENT_MARKET_TITLES[m.type] ?? m.type,
+      status: m.status,
+      selections: mySels,
+      totalPool,
+      _order: TOURNAMENT_MARKET_ORDER[m.type] ?? 99,
+    };
+  });
+  vms.sort((a, b) => a._order - b._order);
+  return vms.map(({ _order, ...rest }) => {
+    void _order;
+    return rest;
+  });
 }
 
 function statusLabel(s: "draft" | "groups" | "playoff" | "finished"): string {

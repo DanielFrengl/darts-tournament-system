@@ -175,6 +175,10 @@ function marketLabel(type: string | undefined): string {
       return "Leg";
     case "tournament_winner":
       return "Vítěz turnaje";
+    case "tournament_runner_up":
+      return "2. místo turnaje";
+    case "tournament_third":
+      return "3. místo turnaje";
     default:
       return type ?? "?";
   }

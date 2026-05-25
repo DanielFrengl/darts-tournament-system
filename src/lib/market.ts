@@ -227,6 +227,93 @@ export class MarketService {
     );
   }
 
+  /**
+   * Open futures markets for 2nd and 3rd place alongside the winner
+   * market. Same uniform 1/N baseline as winner; refined via parimutuel
+   * once bets come in.
+   */
+  async createTournamentPlaces(tournamentId: string): Promise<void> {
+    const existing = await this.db
+      .select({ type: markets.type })
+      .from(markets)
+      .where(eq(markets.tournamentId, tournamentId));
+    const existingTypes = new Set(existing.map((m) => m.type));
+
+    const tPlayers = await this.db
+      .select()
+      .from(players)
+      .where(eq(players.tournamentId, tournamentId));
+    if (tPlayers.length < 2) return;
+    const [t] = await this.db
+      .select()
+      .from(tournaments)
+      .where(eq(tournaments.id, tournamentId));
+    if (!t) return;
+    const cfg = t.configJson as TournamentConfig;
+
+    const placeMarkets: { type: "tournament_runner_up" | "tournament_third" }[] = [];
+    if (!existingTypes.has("tournament_runner_up"))
+      placeMarkets.push({ type: "tournament_runner_up" });
+    if (cfg.thirdPlaceMatch && !existingTypes.has("tournament_third"))
+      placeMarkets.push({ type: "tournament_third" });
+
+    for (const { type } of placeMarkets) {
+      await this.insertMarket(
+        {
+          tournamentId,
+          type,
+          scope: "tournament",
+          status: "open",
+        },
+        tPlayers.map((p) => ({
+          label: p.name,
+          playerId: p.id,
+          scoreA: null,
+          scoreB: null,
+          probability: 1 / tPlayers.length,
+        })),
+        cfg
+      );
+    }
+  }
+
+  /**
+   * Settle a single tournament-scope futures market (winner / 2nd / 3rd).
+   * Returns winning selection ids.
+   */
+  async settleTournamentPlace(
+    tournamentId: string,
+    type:
+      | "tournament_winner"
+      | "tournament_runner_up"
+      | "tournament_third",
+    placePlayerId: string
+  ): Promise<string[]> {
+    const ms = await this.db
+      .select()
+      .from(markets)
+      .where(
+        and(eq(markets.tournamentId, tournamentId), eq(markets.type, type))
+      );
+    const winning: string[] = [];
+    for (const m of ms) {
+      const sels = await this.getSelections(m.id);
+      for (const sel of sels) {
+        const isWin = sel.playerId === placePlayerId;
+        await this.db
+          .update(marketSelections)
+          .set({ isWinner: isWin })
+          .where(eq(marketSelections.id, sel.id));
+        if (isWin) winning.push(sel.id);
+      }
+      await this.db
+        .update(markets)
+        .set({ status: "settled", settledAt: new Date() })
+        .where(eq(markets.id, m.id));
+    }
+    return winning;
+  }
+
   async closeTournamentMarkets(tournamentId: string): Promise<void> {
     await this.db
       .update(markets)

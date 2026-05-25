@@ -99,6 +99,7 @@ export async function startGroups(tournamentId: string): Promise<StartResult> {
     const groupMatches = await matchService.listGroupMatches(tournamentId);
     await onMatchesCreated(groupMatches.map((m) => m.id));
     await marketService.createTournamentWinner(tournamentId);
+    await marketService.createTournamentPlaces(tournamentId);
     const adminId = await currentAdminId();
     if (adminId) await resetCapitalForTournament(cfg.startingCapital, adminId);
     revalidatePath(`/admin/tournaments/${tournamentId}`);
@@ -181,12 +182,33 @@ export async function finishTournament(tournamentId: string): Promise<Result> {
   }
   try {
     await tournamentService.transition(tournamentId, "finished");
-    // Settle tournament-level markets using the final's winner.
+    // Settle tournament-level markets using final results.
     if (final.winnerId) {
-      const winning = await marketService.settleTournamentWinner(
+      const runnerUpId =
+        final.playerAId === final.winnerId ? final.playerBId : final.playerAId;
+      const w = await marketService.settleTournamentPlace(
         tournamentId,
+        "tournament_winner",
         final.winnerId
       );
+      const ru = runnerUpId
+        ? await marketService.settleTournamentPlace(
+            tournamentId,
+            "tournament_runner_up",
+            runnerUpId
+          )
+        : [];
+      const thirdMatch = playoffMatches.find(
+        (m) => m.phase === "third_place" && m.status === "finished"
+      );
+      const third = thirdMatch?.winnerId
+        ? await marketService.settleTournamentPlace(
+            tournamentId,
+            "tournament_third",
+            thirdMatch.winnerId
+          )
+        : [];
+      const winning = [...w, ...ru, ...third];
       const allTourSelections = await tournamentSelectionIds(tournamentId);
       const losing = allTourSelections.filter((id) => !winning.includes(id));
       await bettingService.settleSelections(winning, losing);

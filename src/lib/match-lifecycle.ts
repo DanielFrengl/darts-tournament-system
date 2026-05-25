@@ -200,7 +200,7 @@ async function maybeAutoStartPlayoff(matchId: string): Promise<void> {
 
 /**
  * If the final just finished, mark the tournament finished and settle
- * tournament-level markets (winner futures).
+ * tournament-level markets (winner, 2nd, 3rd place).
  */
 async function maybeAutoFinishTournament(matchId: string): Promise<void> {
   const [m] = await db.select().from(matches).where(eq(matches.id, matchId));
@@ -210,7 +210,39 @@ async function maybeAutoFinishTournament(matchId: string): Promise<void> {
   if (!t || t.status !== "playoff") return;
 
   await tournamentService.transition(t.id, "finished");
-  const winning = await marketService.settleTournamentWinner(t.id, m.winnerId);
+
+  // Winner = m.winnerId; runner-up = the other player in the final.
+  const runnerUpId = m.playerAId === m.winnerId ? m.playerBId : m.playerAId;
+  const winningWin = await marketService.settleTournamentPlace(
+    t.id,
+    "tournament_winner",
+    m.winnerId
+  );
+  const winningRu = runnerUpId
+    ? await marketService.settleTournamentPlace(
+        t.id,
+        "tournament_runner_up",
+        runnerUpId
+      )
+    : [];
+
+  // Third place: winner of the third_place match, if it exists & finished.
+  const [thirdMatch] = await db
+    .select()
+    .from(matches)
+    .where(eq(matches.tournamentId, t.id));
+  const all = await db.select().from(matches).where(eq(matches.tournamentId, t.id));
+  const thirdPlaceMatch = all.find((mm) => mm.phase === "third_place" && mm.status === "finished");
+  const winningThird = thirdPlaceMatch?.winnerId
+    ? await marketService.settleTournamentPlace(
+        t.id,
+        "tournament_third",
+        thirdPlaceMatch.winnerId
+      )
+    : [];
+  void thirdMatch;
+
+  const winning = [...winningWin, ...winningRu, ...winningThird];
   const allTourSelections = await tournamentScopedSelectionIds(t.id);
   const losing = allTourSelections.filter((id) => !winning.includes(id));
   await bettingService.settleSelections(winning, losing);
