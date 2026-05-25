@@ -46,9 +46,14 @@ function MatchGroupCard({ group }: { group: MatchGroupVM }) {
   });
   const dt = new Intl.DateTimeFormat("cs-CZ", { timeStyle: "short" });
   const allSettled = group.bets.every((b) => b.status !== "open");
-
-  return (
-    <Card>
+  const Inner = (
+    <Card
+      className={
+        group.matchId
+          ? "transition-colors hover:border-foreground/30 hover:bg-accent/30"
+          : undefined
+      }
+    >
       <CardHeader className="flex flex-row items-start justify-between gap-3">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
@@ -57,21 +62,14 @@ function MatchGroupCard({ group }: { group: MatchGroupVM }) {
             )}
             {group.matchStatus && <MatchStatusBadge status={group.matchStatus} />}
           </div>
-          {group.matchId ? (
-            <Link
-              href={`/match/${group.matchId}`}
-              className="text-lg font-semibold hover:underline"
-            >
-              {group.matchSummary}
-              {group.matchScore && (
-                <span className="ml-3 font-mono text-muted-foreground">
-                  {group.matchScore}
-                </span>
-              )}
-            </Link>
-          ) : (
-            <p className="text-lg font-semibold">{group.matchSummary}</p>
-          )}
+          <p className="text-lg font-semibold">
+            {group.matchSummary}
+            {group.matchScore && (
+              <span className="ml-3 font-mono text-muted-foreground">
+                {group.matchScore}
+              </span>
+            )}
+          </p>
         </div>
         <div className="text-right text-sm">
           <p className="text-muted-foreground">
@@ -147,6 +145,15 @@ function MatchGroupCard({ group }: { group: MatchGroupVM }) {
       </CardContent>
     </Card>
   );
+
+  if (group.matchId) {
+    return (
+      <Link href={`/match/${group.matchId}`} className="block">
+        {Inner}
+      </Link>
+    );
+  }
+  return Inner;
 }
 
 function MatchStatusBadge({
