@@ -1,5 +1,5 @@
 import { tournamentService } from "@/lib/tournament";
-import { buildMatchList } from "@/lib/tournament-views";
+import { buildMatchList, buildBracketMatches } from "@/lib/tournament-views";
 import { getAppSettings } from "@/lib/settings";
 import { TvDisplay } from "@/components/tournament/TvDisplay";
 
@@ -19,6 +19,7 @@ export default async function DisplayPage() {
     );
   }
   const matches = await buildMatchList(t.id);
+  const bracket = await buildBracketMatches(t.id);
   const initialFactIndex = Math.floor(Date.now() / 12_000);
   return (
     <TvDisplay
@@ -28,6 +29,7 @@ export default async function DisplayPage() {
       logoUrl={settings.logoUrl}
       startedAt={t.startedAt ? t.startedAt.toISOString() : null}
       matches={matches}
+      bracket={bracket}
       initialFactIndex={initialFactIndex}
     />
   );

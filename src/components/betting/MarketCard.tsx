@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BetDialog, type BetTarget } from "./BetDialog";
 
@@ -11,6 +10,7 @@ export type SelectionVM = {
   label: string;
   finalOdds: number;
   isWinner: boolean | null;
+  pool: number;
 };
 
 export type MarketCardVM = {
@@ -18,7 +18,10 @@ export type MarketCardVM = {
   title: string;
   status: "open" | "closed" | "settled" | "cancelled";
   selections: SelectionVM[];
+  totalPool: number;
 };
+
+const poolFmt = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
 
 export function MarketCard({
   market,
@@ -45,26 +48,63 @@ export function MarketCard({
         </CardHeader>
         <CardContent>
           <div className="grid gap-2">
-            {market.selections.map((sel) => (
-              <Button
-                key={sel.id}
-                variant={sel.isWinner ? "default" : "outline"}
-                disabled={!canBet || market.status !== "open"}
-                onClick={() =>
-                  setTarget({
-                    selectionId: sel.id,
-                    marketLabel: market.title,
-                    selectionLabel: sel.label,
-                    finalOdds: sel.finalOdds,
-                  })
-                }
-                className="flex items-center justify-between"
-              >
-                <span>{sel.label}</span>
-                <span className="font-mono">{sel.finalOdds.toFixed(2)}</span>
-              </Button>
-            ))}
+            {market.selections.map((sel) => {
+              const sharePct =
+                market.totalPool > 0 ? (sel.pool / market.totalPool) * 100 : 0;
+              const disabled = !canBet || market.status !== "open";
+              const winningStyle =
+                sel.isWinner === true
+                  ? "border-emerald-500 bg-emerald-500/10"
+                  : sel.isWinner === false
+                    ? "opacity-60"
+                    : "";
+              return (
+                <button
+                  type="button"
+                  key={sel.id}
+                  disabled={disabled}
+                  onClick={() =>
+                    setTarget({
+                      selectionId: sel.id,
+                      marketLabel: market.title,
+                      selectionLabel: sel.label,
+                      finalOdds: sel.finalOdds,
+                    })
+                  }
+                  className={`relative overflow-hidden rounded-md border bg-background p-3 text-left transition-colors hover:border-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:hover:border-border disabled:hover:bg-background ${winningStyle}`}
+                >
+                  {market.totalPool > 0 && (
+                    <span
+                      aria-hidden
+                      className="absolute inset-y-0 left-0 bg-primary/8"
+                      style={{ width: `${sharePct}%` }}
+                    />
+                  )}
+                  <span className="relative flex items-center justify-between gap-3">
+                    <span className="font-medium">{sel.label}</span>
+                    <span className="flex items-center gap-3 text-sm">
+                      {sel.pool > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          {poolFmt.format(sel.pool)} · {sharePct.toFixed(0)}%
+                        </span>
+                      )}
+                      <span className="font-mono text-base font-semibold">
+                        {sel.finalOdds.toFixed(2)}
+                      </span>
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
+          {market.totalPool > 0 && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Pool celkem:{" "}
+              <span className="font-mono text-foreground">
+                {poolFmt.format(market.totalPool)}
+              </span>
+            </p>
+          )}
         </CardContent>
       </Card>
       <BetDialog

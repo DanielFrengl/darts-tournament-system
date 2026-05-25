@@ -1,9 +1,10 @@
 import { notFound, redirect } from "next/navigation";
-import { asc, eq, inArray } from "drizzle-orm";
+import { asc, eq, inArray, and, sum } from "drizzle-orm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { db } from "@/db/client";
 import {
+  bets,
   legs,
   matches,
   marketSelections,
@@ -65,6 +66,22 @@ export default async function MatchDetailPage({
   const legRows = await db.select().from(legs).where(eq(legs.matchId, id)).orderBy(asc(legs.legNumber));
   const legNumberById = new Map(legRows.map((l) => [l.id, l.legNumber]));
 
+  // Aggregated open-bet stake per selection
+  const allSelectionIds = allSelections.map((s) => s.id);
+  const poolPerSelection = new Map<string, number>();
+  if (allSelectionIds.length) {
+    const sumRows = await db
+      .select({ selectionId: bets.selectionId, total: sum(bets.stake) })
+      .from(bets)
+      .where(
+        and(inArray(bets.selectionId, allSelectionIds), eq(bets.status, "open"))
+      )
+      .groupBy(bets.selectionId);
+    for (const r of sumRows) {
+      poolPerSelection.set(r.selectionId, Number(r.total ?? 0));
+    }
+  }
+
   const vms: MarketCardVM[] = allMarkets.map((m) => {
     const sels = allSelections
       .filter((s) => s.marketId === m.id)
@@ -73,7 +90,9 @@ export default async function MatchDetailPage({
         label: s.label,
         finalOdds: Number(s.finalOdds),
         isWinner: s.isWinner ?? null,
+        pool: poolPerSelection.get(s.id) ?? 0,
       }));
+    const totalPool = sels.reduce((acc, s) => acc + s.pool, 0);
     const title =
       m.type === "match_winner"
         ? "Vítěz zápasu"
@@ -87,6 +106,7 @@ export default async function MatchDetailPage({
       title,
       status: m.status,
       selections: sels,
+      totalPool,
     };
   });
 

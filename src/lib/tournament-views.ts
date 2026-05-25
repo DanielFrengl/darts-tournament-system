@@ -1,7 +1,8 @@
 import "server-only";
-import { asc, eq, inArray, and } from "drizzle-orm";
+import { asc, eq, inArray, and, sum } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
+  bets,
   groups,
   matches,
   markets,
@@ -159,6 +160,37 @@ export async function buildMatchList(tournamentId: string): Promise<MatchListIte
     inner.set(s.playerId, { odds: Number(s.finalOdds), selectionId: s.id });
   }
 
+  // Total wagered per match across all open match-scoped markets
+  const poolPerMatch = new Map<string, number>();
+  if (matchIds.length) {
+    const matchScopedMarkets = await db
+      .select()
+      .from(markets)
+      .where(and(inArray(markets.matchId, matchIds), eq(markets.scope, "match")));
+    const matchScopedIds = matchScopedMarkets.map((m) => m.id);
+    if (matchScopedIds.length) {
+      const sumRows = await db
+        .select({ marketId: marketSelections.marketId, total: sum(bets.stake) })
+        .from(bets)
+        .innerJoin(marketSelections, eq(marketSelections.id, bets.selectionId))
+        .where(
+          and(
+            inArray(marketSelections.marketId, matchScopedIds),
+            eq(bets.status, "open")
+          )
+        )
+        .groupBy(marketSelections.marketId);
+      const totalByMarket = new Map(
+        sumRows.map((r) => [r.marketId, Number(r.total ?? 0)])
+      );
+      for (const m of matchScopedMarkets) {
+        if (!m.matchId) continue;
+        const cur = poolPerMatch.get(m.matchId) ?? 0;
+        poolPerMatch.set(m.matchId, cur + (totalByMarket.get(m.id) ?? 0));
+      }
+    }
+  }
+
   const sorted = [...all].sort((a, b) => {
     const phaseDiff = (PHASE_ORDER[a.phase] ?? 99) - (PHASE_ORDER[b.phase] ?? 99);
     if (phaseDiff !== 0) return phaseDiff;
@@ -198,6 +230,7 @@ export async function buildMatchList(tournamentId: string): Promise<MatchListIte
       oddsB: b?.odds ?? null,
       selectionIdA: a?.selectionId ?? null,
       selectionIdB: b?.selectionId ?? null,
+      totalPool: poolPerMatch.get(m.id) ?? 0,
     };
   });
 }

@@ -21,6 +21,7 @@ export type MatchListItem = {
   oddsB: number | null;
   selectionIdA: string | null;
   selectionIdB: string | null;
+  totalPool: number;
 };
 
 export function MatchListCard({
@@ -125,13 +126,21 @@ export function MatchListCard({
                 }
               />
             </div>
-            <Link
-              href={`/match/${match.id}`}
-              className="flex items-center justify-end gap-1 text-xs text-muted-foreground hover:text-foreground"
-            >
-              Více trhů (přesný výsledek, legy)
-              <ArrowRight className="h-3 w-3" />
-            </Link>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>
+                Vsazeno celkem:{" "}
+                <span className="font-mono text-foreground">
+                  {formatPool(match.totalPool)}
+                </span>
+              </span>
+              <Link
+                href={`/match/${match.id}`}
+                className="flex items-center gap-1 hover:text-foreground"
+              >
+                Více trhů
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
           </div>
         ) : (
           <Link
@@ -170,6 +179,12 @@ function PlayerSlot({
       {name}
     </span>
   );
+}
+
+const poolFmt = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+function formatPool(pool: number): string {
+  if (pool <= 0) return "—";
+  return poolFmt.format(pool);
 }
 
 function OddsButton({
