@@ -20,7 +20,6 @@ export default async function DisplayPage() {
   }
   const matches = await buildMatchList(t.id);
   const bracket = await buildBracketMatches(t.id);
-  const initialFactIndex = Math.floor(Date.now() / 12_000);
   return (
     <TvDisplay
       tournamentId={t.id}
@@ -30,7 +29,6 @@ export default async function DisplayPage() {
       startedAt={t.startedAt ? t.startedAt.toISOString() : null}
       matches={matches}
       bracket={bracket}
-      initialFactIndex={initialFactIndex}
     />
   );
 }
