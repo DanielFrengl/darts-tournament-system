@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, count, desc, eq, sum } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import {
   Table,
   TableBody,
@@ -13,76 +13,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { db } from "@/db/client";
-import { bets, markets, marketSelections, users } from "@/db/schema";
+import { users } from "@/db/schema";
 import { displayName } from "@/lib/names";
 import { tournamentService } from "@/lib/tournament";
+import { userStats } from "@/lib/user-stats";
 import {
   LeaderboardCharts,
   type LeaderboardRow,
 } from "@/components/leaderboard/LeaderboardCharts";
-
-async function statsFor(userId: string, tournamentId?: string) {
-  // Build a fragment that filters bets by tournament when needed by
-  // joining through marketSelections → markets → tournament.
-  const baseSelect = () => {
-    if (tournamentId) {
-      return db
-        .select({ value: count() })
-        .from(bets)
-        .innerJoin(marketSelections, eq(marketSelections.id, bets.selectionId))
-        .innerJoin(markets, eq(markets.id, marketSelections.marketId));
-    }
-    return db.select({ value: count() }).from(bets);
-  };
-  const baseSum = (col: typeof bets.stake | typeof bets.payout) => {
-    if (tournamentId) {
-      return db
-        .select({ value: sum(col) })
-        .from(bets)
-        .innerJoin(marketSelections, eq(marketSelections.id, bets.selectionId))
-        .innerJoin(markets, eq(markets.id, marketSelections.marketId));
-    }
-    return db.select({ value: sum(col) }).from(bets);
-  };
-  const scope = (extra?: ReturnType<typeof eq>) => {
-    const parts = [eq(bets.userId, userId)];
-    if (tournamentId) parts.push(eq(markets.tournamentId, tournamentId));
-    if (extra) parts.push(extra);
-    return and(...parts);
-  };
-
-  const [countRow] = await baseSelect().where(scope());
-  const [wonRow] = await baseSelect().where(scope(eq(bets.status, "won")));
-  const [lostRow] = await baseSelect().where(scope(eq(bets.status, "lost")));
-  const [refundedRow] = await baseSelect().where(scope(eq(bets.status, "refunded")));
-  const [openRow] = await baseSelect().where(scope(eq(bets.status, "open")));
-  const [stakeRow] = await baseSum(bets.stake).where(scope());
-  const [payoutWonRow] = await baseSum(bets.payout).where(scope(eq(bets.status, "won")));
-  const [payoutRefundRow] = await baseSum(bets.payout).where(
-    scope(eq(bets.status, "refunded"))
-  );
-
-  const totalStaked = Number(stakeRow?.value ?? 0);
-  const totalReturn = Number(payoutWonRow?.value ?? 0) + Number(payoutRefundRow?.value ?? 0);
-  const won = Number(wonRow?.value ?? 0);
-  const lost = Number(lostRow?.value ?? 0);
-  const refunded = Number(refundedRow?.value ?? 0);
-  const open = Number(openRow?.value ?? 0);
-  const settled = won + lost;
-
-  return {
-    totalStaked,
-    totalReturn,
-    netProfit: totalReturn - totalStaked,
-    roi: totalStaked > 0 ? ((totalReturn - totalStaked) / totalStaked) * 100 : null,
-    betCount: Number(countRow?.value ?? 0),
-    won,
-    lost,
-    refunded,
-    open,
-    winRate: settled > 0 ? (won / settled) * 100 : null,
-  };
-}
 
 type FullRow = LeaderboardRow & { avatarUrl: string | null };
 
@@ -101,7 +39,7 @@ async function buildRows(tournamentId?: string): Promise<FullRow[]> {
 
   const rows: FullRow[] = [];
   for (const u of userRows) {
-    const s = await statsFor(u.id, tournamentId);
+    const s = await userStats(u.id, tournamentId);
     rows.push({
       userId: u.id,
       username: u.username,
