@@ -23,6 +23,7 @@ export async function startLegAction(
   try {
     await startLegWithMarkets(matchId);
     revalidatePath(`/admin/tournaments/${tournamentId}/matches`);
+    revalidatePath(`/admin/tournaments/${tournamentId}/play`);
     revalidatePath("/tournament");
     return { ok: true };
   } catch (err) {
@@ -39,6 +40,7 @@ export async function recordLegAction(
   try {
     await recordLegAndAdvance(legId, winnerId);
     revalidatePath(`/admin/tournaments/${tournamentId}/matches`);
+    revalidatePath(`/admin/tournaments/${tournamentId}/play`);
     revalidatePath("/tournament");
     return { ok: true };
   } catch (err) {
@@ -54,6 +56,7 @@ export async function cancelMatchAction(
   try {
     await cancelMatchWithMarkets(matchId);
     revalidatePath(`/admin/tournaments/${tournamentId}/matches`);
+    revalidatePath(`/admin/tournaments/${tournamentId}/play`);
     revalidatePath("/tournament");
     return { ok: true };
   } catch (err) {

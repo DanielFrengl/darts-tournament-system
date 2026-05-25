@@ -14,6 +14,53 @@ import { capitalService } from "@/lib/capital";
 import { onMatchesCreated } from "@/lib/match-lifecycle";
 
 type Result = { ok: true } | { ok: false; error: string };
+type StartResult =
+  | { ok: true; firstMatchId: string | null }
+  | { ok: false; error: string };
+
+export async function renameTournament(
+  tournamentId: string,
+  name: string
+): Promise<Result> {
+  if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
+  const trimmed = name.trim();
+  if (!trimmed) return { ok: false, error: "Název je povinný" };
+  if (trimmed.length > 100) return { ok: false, error: "Název je moc dlouhý" };
+  try {
+    await tournamentService.rename(tournamentId, trimmed);
+    revalidatePath(`/admin/tournaments/${tournamentId}`);
+    revalidatePath("/admin/tournaments");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
+export async function deleteTournament(tournamentId: string): Promise<Result> {
+  if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
+  const t = await tournamentService.get(tournamentId);
+  if (!t) return { ok: false, error: "Turnaj nenalezen" };
+  if (t.status !== "draft" && t.status !== "finished") {
+    return {
+      ok: false,
+      error: "Smazat lze jen turnaj v přípravě nebo už dohraný",
+    };
+  }
+  try {
+    await tournamentService.delete(tournamentId);
+    revalidatePath("/admin/tournaments");
+    revalidatePath("/tournament");
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      error:
+        err instanceof Error
+          ? `Smazání selhalo: ${err.message}`
+          : "Smazání selhalo",
+    };
+  }
+}
 
 async function requireAdmin(): Promise<boolean> {
   const session = await auth();
@@ -26,7 +73,7 @@ async function currentAdminId(): Promise<string | null> {
   return null;
 }
 
-export async function startGroups(tournamentId: string): Promise<Result> {
+export async function startGroups(tournamentId: string): Promise<StartResult> {
   if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
   const t = await tournamentService.get(tournamentId);
   if (!t) return { ok: false, error: "Tournament not found" };
@@ -57,7 +104,8 @@ export async function startGroups(tournamentId: string): Promise<Result> {
     revalidatePath(`/admin/tournaments/${tournamentId}`);
     revalidatePath("/tournament");
     revalidatePath("/");
-    return { ok: true };
+    const firstMatchId = groupMatches[0]?.id ?? null;
+    return { ok: true, firstMatchId };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Failed" };
   }

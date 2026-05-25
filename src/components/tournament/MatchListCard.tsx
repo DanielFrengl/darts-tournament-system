@@ -203,10 +203,14 @@ function OddsButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="flex items-center justify-between rounded border bg-background px-3 py-2 text-left transition-colors hover:border-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:bg-background"
+      className="group flex cursor-pointer items-center justify-between gap-2 rounded-md border-2 border-amber-500/40 bg-amber-500/5 px-3 py-2.5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-amber-400 hover:bg-amber-500/15 hover:shadow-md active:translate-y-0 disabled:cursor-not-allowed disabled:border-border disabled:bg-muted/40 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:border-border disabled:hover:bg-muted/40 disabled:hover:shadow-sm"
     >
-      <span className="truncate text-xs text-muted-foreground">{name}</span>
-      <span className="font-mono font-semibold tabular-nums">{odds.toFixed(2)}</span>
+      <span className="truncate text-xs text-muted-foreground group-hover:text-foreground">
+        {name}
+      </span>
+      <span className="font-mono text-base font-bold tabular-nums text-amber-400 group-hover:text-amber-300">
+        {odds.toFixed(2)}
+      </span>
     </button>
   );
 }

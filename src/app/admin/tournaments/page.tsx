@@ -40,7 +40,27 @@ export default async function AdminTournamentsPage() {
                     </TableCell>
                     <TableCell className="text-muted-foreground">{dt.format(t.createdAt)}</TableCell>
                     <TableCell>
-                      <Button size="sm" variant="ghost" render={<Link href={`/admin/tournaments/${t.id}`}>Spravovat</Link>} />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        render={
+                          <Link href={`/admin/tournaments/${t.id}`}>
+                            Spravovat
+                          </Link>
+                        }
+                      />
+                      {(t.status === "draft" || t.status === "finished") && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          render={
+                            <Link href={`/admin/tournaments/${t.id}`}>
+                              Upravit / smazat
+                            </Link>
+                          }
+                        />
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

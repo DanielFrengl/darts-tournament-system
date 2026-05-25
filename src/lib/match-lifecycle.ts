@@ -1,9 +1,11 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { matches, players } from "@/db/schema";
+import { matches, players, tournaments } from "@/db/schema";
 import { marketService } from "@/lib/market";
 import { bettingService } from "@/lib/betting";
 import { bracketService } from "@/lib/bracket";
+import { matchService } from "@/lib/match";
+import { tournamentService } from "@/lib/tournament";
 import { publish } from "@/lib/event-bus";
 import { updateRatings } from "@/lib/elo";
 
@@ -93,6 +95,11 @@ export async function onLegFinished({
     // and seed markets for any newly created matches.
     await bracketService.advanceWinner(matchId);
     await createMarketsForNewMatches(matchId);
+
+    // Auto-create playoff bracket when the last group match finishes.
+    await maybeAutoStartPlayoff(matchId);
+    // Auto-finish the tournament when the final concludes.
+    await maybeAutoFinishTournament(matchId);
   }
 
   publish(`match:${matchId}`, matchFinished ? "finished" : "leg_finished", {
@@ -162,6 +169,70 @@ async function updateMatchElo(matchId: string, winnerId: string): Promise<void> 
   const { nextA, nextB } = updateRatings(pA.eloRating, pB.eloRating, winnerSide);
   await db.update(players).set({ eloRating: nextA }).where(eq(players.id, pA.id));
   await db.update(players).set({ eloRating: nextB }).where(eq(players.id, pB.id));
+}
+
+/**
+ * If the just-finished match was the last unfinished group match and the
+ * tournament is in 'groups' status, automatically generate the playoff
+ * bracket and transition. Eliminates the manual "Vytvořit pavouka" step.
+ */
+async function maybeAutoStartPlayoff(matchId: string): Promise<void> {
+  const [m] = await db.select().from(matches).where(eq(matches.id, matchId));
+  if (!m || m.phase !== "group") return;
+  const [t] = await db.select().from(tournaments).where(eq(tournaments.id, m.tournamentId));
+  if (!t || t.status !== "groups") return;
+  const groupMatches = await matchService.listGroupMatches(t.id);
+  const unfinished = groupMatches.filter(
+    (gm) => gm.status !== "finished" && gm.status !== "cancelled"
+  );
+  if (unfinished.length > 0) return;
+
+  await bracketService.createBracket(t.id);
+  await tournamentService.transition(t.id, "playoff");
+  const all = await matchService.listByTournament(t.id);
+  const playoff = all.filter((mm) => mm.phase !== "group");
+  for (const pm of playoff) {
+    await marketService.createForMatch(pm.id);
+  }
+  await marketService.closeTournamentMarkets(t.id);
+  publish(`tournament:${t.id}`, "playoff_started");
+}
+
+/**
+ * If the final just finished, mark the tournament finished and settle
+ * tournament-level markets (winner futures).
+ */
+async function maybeAutoFinishTournament(matchId: string): Promise<void> {
+  const [m] = await db.select().from(matches).where(eq(matches.id, matchId));
+  if (!m || m.phase !== "final") return;
+  if (!m.winnerId) return;
+  const [t] = await db.select().from(tournaments).where(eq(tournaments.id, m.tournamentId));
+  if (!t || t.status !== "playoff") return;
+
+  await tournamentService.transition(t.id, "finished");
+  const winning = await marketService.settleTournamentWinner(t.id, m.winnerId);
+  const allTourSelections = await tournamentScopedSelectionIds(t.id);
+  const losing = allTourSelections.filter((id) => !winning.includes(id));
+  await bettingService.settleSelections(winning, losing);
+  publish(`tournament:${t.id}`, "tournament_finished");
+}
+
+async function tournamentScopedSelectionIds(tournamentId: string): Promise<string[]> {
+  const { markets, marketSelections } = await import("@/db/schema");
+  const ms = await db
+    .select()
+    .from(markets)
+    .where(eq(markets.tournamentId, tournamentId));
+  const tourScoped = ms.filter((mm) => mm.scope === "tournament");
+  const out: string[] = [];
+  for (const mm of tourScoped) {
+    const sels = await db
+      .select({ id: marketSelections.id })
+      .from(marketSelections)
+      .where(eq(marketSelections.marketId, mm.id));
+    for (const s of sels) out.push(s.id);
+  }
+  return out;
 }
 
 async function createMarketsForNewMatches(originatingMatchId: string): Promise<void> {

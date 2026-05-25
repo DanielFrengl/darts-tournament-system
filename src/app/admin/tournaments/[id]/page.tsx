@@ -7,6 +7,7 @@ import { tournamentService } from "@/lib/tournament";
 import { playerService } from "@/lib/player";
 import { matchService } from "@/lib/match";
 import { TournamentControls } from "@/components/admin/TournamentControls";
+import { TournamentAdminActions } from "@/components/admin/TournamentAdminActions";
 import { WizardNav } from "@/components/admin/WizardNav";
 
 export default async function AdminTournamentDetail({
@@ -36,9 +37,20 @@ export default async function AdminTournamentDetail({
       </div>
 
       <div className="flex flex-wrap gap-2">
+        {t.status !== "draft" && t.status !== "finished" && (
+          <Button
+            render={<Link href={`/admin/tournaments/${id}/play`}>▶ Skórovat</Link>}
+          />
+        )}
         <Button variant="outline" render={<Link href={`/admin/tournaments/${id}/players`}>Hráči ({players.length})</Link>} />
-        <Button variant="outline" render={<Link href={`/admin/tournaments/${id}/matches`}>Zápasy</Link>} />
+        <Button variant="outline" render={<Link href={`/admin/tournaments/${id}/matches`}>Všechny zápasy</Link>} />
       </div>
+
+      <TournamentAdminActions
+        tournamentId={id}
+        currentName={t.name}
+        status={t.status}
+      />
 
       <Card>
         <CardHeader>

@@ -90,6 +90,13 @@ export class TournamentService {
     if (!name.trim()) throw new Error("name required");
     await this.db.update(tournaments).set({ name }).where(eq(tournaments.id, id));
   }
+
+  async delete(id: string): Promise<void> {
+    // Cascades handle groups, players, matches, legs, markets, market_selections.
+    // bets uses ON DELETE RESTRICT on selection_id, so caller must first
+    // clear bets if any exist (only allowed in draft, where bets shouldn't).
+    await this.db.delete(tournaments).where(eq(tournaments.id, id));
+  }
 }
 
 function cast(row: Tournament): TournamentWithConfig {

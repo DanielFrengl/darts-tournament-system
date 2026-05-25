@@ -82,33 +82,50 @@ export default async function MatchDetailPage({
     }
   }
 
-  const vms: MarketCardVM[] = allMarkets.map((m) => {
-    const sels = allSelections
-      .filter((s) => s.marketId === m.id)
-      .map((s) => ({
-        id: s.id,
-        label: s.label,
-        finalOdds: Number(s.finalOdds),
-        isWinner: s.isWinner ?? null,
-        pool: poolPerSelection.get(s.id) ?? 0,
-      }));
-    const totalPool = sels.reduce((acc, s) => acc + s.pool, 0);
-    const title =
-      m.type === "match_winner"
-        ? "Vítěz zápasu"
-        : m.type === "correct_score"
-          ? "Přesný výsledek"
-          : m.legId
-            ? `Leg ${legNumberById.get(m.legId) ?? "?"}`
-            : "Leg";
-    return {
-      id: m.id,
-      title,
-      status: m.status,
-      selections: sels,
-      totalPool,
-    };
-  });
+  type CategoryKey = "primary" | "secondary" | "live";
+  const vms: (MarketCardVM & { category: CategoryKey; sortKey: number })[] =
+    allMarkets.map((m) => {
+      const sels = allSelections
+        .filter((s) => s.marketId === m.id)
+        .map((s) => ({
+          id: s.id,
+          label: s.label,
+          finalOdds: Number(s.finalOdds),
+          isWinner: s.isWinner ?? null,
+          pool: poolPerSelection.get(s.id) ?? 0,
+        }));
+      const totalPool = sels.reduce((acc, s) => acc + s.pool, 0);
+      const legNumber = m.legId ? legNumberById.get(m.legId) ?? 0 : 0;
+      const title =
+        m.type === "match_winner"
+          ? "Vítěz zápasu"
+          : m.type === "correct_score"
+            ? "Přesný výsledek"
+            : m.legId
+              ? `Leg ${legNumber || "?"} — vítěz`
+              : "Leg";
+      const category: CategoryKey =
+        m.type === "match_winner"
+          ? "primary"
+          : m.type === "correct_score"
+            ? "secondary"
+            : "live";
+      return {
+        id: m.id,
+        title,
+        status: m.status,
+        selections: sels,
+        totalPool,
+        category,
+        sortKey: legNumber,
+      };
+    });
+
+  const primary = vms.filter((v) => v.category === "primary");
+  const secondary = vms.filter((v) => v.category === "secondary");
+  const live = vms
+    .filter((v) => v.category === "live")
+    .sort((a, b) => a.sortKey - b.sortKey);
 
   const nameA = match.playerAId ? playerById.get(match.playerAId)?.name ?? "?" : "?";
   const nameB = match.playerBId ? playerById.get(match.playerBId)?.name ?? "?" : "?";
@@ -140,20 +157,85 @@ export default async function MatchDetailPage({
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {vms.map((vm) => (
-            <MarketCard
-              key={vm.id}
-              market={vm}
-              matchId={id}
-              capital={Number(me?.capital ?? 0)}
-              maxStakePct={cfg.maxStakePct}
-              canBet={match.status !== "cancelled"}
-            />
-          ))}
+        <div className="space-y-8">
+          {primary.length > 0 && (
+            <Section title="Hlavní trh" subtitle="Kdo vyhraje zápas">
+              <div className="grid gap-4 md:grid-cols-2">
+                {primary.map((vm) => (
+                  <MarketCard
+                    key={vm.id}
+                    market={vm}
+                    matchId={id}
+                    capital={Number(me?.capital ?? 0)}
+                    maxStakePct={cfg.maxStakePct}
+                    canBet={match.status !== "cancelled"}
+                  />
+                ))}
+              </div>
+            </Section>
+          )}
+          {secondary.length > 0 && (
+            <Section title="Vedlejší trhy" subtitle="Přesný výsledek">
+              <div className="grid gap-4 md:grid-cols-2">
+                {secondary.map((vm) => (
+                  <MarketCard
+                    key={vm.id}
+                    market={vm}
+                    matchId={id}
+                    capital={Number(me?.capital ?? 0)}
+                    maxStakePct={cfg.maxStakePct}
+                    canBet={match.status !== "cancelled"}
+                  />
+                ))}
+              </div>
+            </Section>
+          )}
+          {live.length > 0 && (
+            <Section
+              title="Live: jednotlivé legy"
+              subtitle="Sázej na vítěze každého rozjetého legu"
+            >
+              <div className="grid gap-4 md:grid-cols-2">
+                {live.map((vm) => (
+                  <MarketCard
+                    key={vm.id}
+                    market={vm}
+                    matchId={id}
+                    capital={Number(me?.capital ?? 0)}
+                    maxStakePct={cfg.maxStakePct}
+                    canBet={match.status !== "cancelled"}
+                  />
+                ))}
+              </div>
+            </Section>
+          )}
         </div>
       )}
     </div>
+  );
+}
+
+function Section({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-3">
+      <div>
+        <h2 className="text-lg font-semibold">{title}</h2>
+        {subtitle && (
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">
+            {subtitle}
+          </p>
+        )}
+      </div>
+      {children}
+    </section>
   );
 }
 
