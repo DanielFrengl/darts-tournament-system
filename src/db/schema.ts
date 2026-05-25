@@ -282,6 +282,15 @@ export type Match = typeof matches.$inferSelect;
 export type NewMatch = typeof matches.$inferInsert;
 export type Leg = typeof legs.$inferSelect;
 export type NewLeg = typeof legs.$inferInsert;
+
+export const appSettings = pgTable("app_settings", {
+  id: integer("id").primaryKey().default(1),
+  name: varchar("name", { length: 100 }).notNull().default("Jabloňová Open"),
+  logoUrl: text("logo_url").notNull().default("/logo.png"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+export type AppSettings = typeof appSettings.$inferSelect;
+export type NewAppSettings = typeof appSettings.$inferInsert;
 export type Market = typeof markets.$inferSelect;
 export type NewMarket = typeof markets.$inferInsert;
 export type MarketSelection = typeof marketSelections.$inferSelect;

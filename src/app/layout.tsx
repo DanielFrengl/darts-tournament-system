@@ -5,6 +5,7 @@ import { SessionProvider } from "next-auth/react";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { auth } from "@/lib/auth";
+import { getAppSettings } from "@/lib/settings";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -19,10 +20,14 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "Darts Tournament",
-  description: "Local darts tournament with virtual betting",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getAppSettings();
+  return {
+    title: settings.name,
+    description: "Lokální darts turnaj s virtuálními sázkami",
+    icons: { icon: settings.logoUrl },
+  };
+}
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const session = await auth();

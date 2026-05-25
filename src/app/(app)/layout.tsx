@@ -7,6 +7,7 @@ import { users } from "@/db/schema";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { UserMenu } from "@/components/layout/UserMenu";
 import { CapitalDisplay } from "@/components/user/CapitalDisplay";
+import { getAppSettings } from "@/lib/settings";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const session = await auth();
@@ -23,10 +24,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     .from(users)
     .where(eq(users.id, session.user.id));
   if (!me) redirect("/login");
+  const settings = await getAppSettings();
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar role={me.role} />
+      <Sidebar role={me.role} systemName={settings.name} logoUrl={settings.logoUrl} />
       <div className="flex flex-1 flex-col">
         <header className="flex items-center justify-end gap-4 border-b p-4">
           <CapitalDisplay capital={me.capital} />

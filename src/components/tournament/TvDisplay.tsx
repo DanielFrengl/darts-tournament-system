@@ -9,12 +9,16 @@ import type { MatchListItem } from "@/components/tournament/MatchListCard";
 export function TvDisplay({
   tournamentId,
   tournamentName,
+  systemName,
+  logoUrl,
   startedAt,
   matches,
   initialFactIndex,
 }: {
   tournamentId: string;
   tournamentName: string;
+  systemName: string;
+  logoUrl: string;
   startedAt: string | null;
   matches: MatchListItem[];
   initialFactIndex: number;
@@ -37,12 +41,16 @@ export function TvDisplay({
 
   return (
     <div className="flex min-h-screen flex-col bg-black p-8 text-white">
-      <header className="flex items-baseline justify-between border-b border-white/20 pb-4">
-        <div>
-          <h1 className="text-5xl font-bold tracking-tight">{tournamentName}</h1>
-          <p className="mt-1 text-sm uppercase tracking-widest text-white/60">
-            Lokální turnaj
-          </p>
+      <header className="flex items-center justify-between gap-6 border-b border-white/20 pb-4">
+        <div className="flex items-center gap-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={logoUrl} alt={systemName} className="h-20 w-20 object-contain" />
+          <div>
+            <h1 className="text-5xl font-bold tracking-tight">{tournamentName}</h1>
+            <p className="mt-1 text-sm uppercase tracking-widest text-white/60">
+              {systemName}
+            </p>
+          </div>
         </div>
         <div className="text-right">
           <p className="text-xs uppercase tracking-widest text-white/60">Probíhá</p>

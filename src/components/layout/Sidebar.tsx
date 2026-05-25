@@ -1,12 +1,26 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Home, Trophy, Receipt, Award, Shield } from "lucide-react";
+import { Home, Trophy, Receipt, Award, Shield, Settings } from "lucide-react";
 
-export function Sidebar({ role }: { role: "user" | "admin" }) {
+export function Sidebar({
+  role,
+  systemName,
+  logoUrl,
+}: {
+  role: "user" | "admin";
+  systemName: string;
+  logoUrl: string;
+}) {
   return (
     <aside className="flex w-56 flex-col gap-2 border-r p-4">
-      <Link href="/" className="mb-6 block text-xl font-bold">
-        🎯 Darts
+      <Link href="/" className="mb-6 flex items-center gap-2">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={logoUrl}
+          alt={systemName}
+          className="h-9 w-9 rounded object-contain"
+        />
+        <span className="truncate text-base font-bold leading-tight">{systemName}</span>
       </Link>
       <nav className="space-y-1">
         <SidebarLink href="/" icon={<Home className="h-4 w-4" />} label="Dashboard" />
@@ -44,6 +58,11 @@ export function Sidebar({ role }: { role: "user" | "admin" }) {
               href="/admin/audit"
               icon={<Receipt className="h-4 w-4" />}
               label="Audit log"
+            />
+            <SidebarLink
+              href="/admin/settings"
+              icon={<Settings className="h-4 w-4" />}
+              label="Nastavení"
             />
           </nav>
         </>
