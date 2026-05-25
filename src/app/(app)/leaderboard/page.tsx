@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { desc, eq, sum, and } from "drizzle-orm";
+import { and, count, desc, eq, sum } from "drizzle-orm";
 import {
   Table,
   TableBody,
@@ -13,17 +13,66 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { db } from "@/db/client";
 import { bets, users } from "@/db/schema";
+import {
+  LeaderboardCharts,
+  type LeaderboardRow,
+} from "@/components/leaderboard/LeaderboardCharts";
 
-type Row = {
-  userId: string;
-  username: string;
-  avatarUrl: string | null;
-  capital: string;
-  totalStaked: number;
-  totalReturn: number;
-  netProfit: number;
-  betCount: number;
-};
+async function statsFor(userId: string) {
+  const [countRow] = await db
+    .select({ value: count() })
+    .from(bets)
+    .where(eq(bets.userId, userId));
+  const [wonRow] = await db
+    .select({ value: count() })
+    .from(bets)
+    .where(and(eq(bets.userId, userId), eq(bets.status, "won")));
+  const [lostRow] = await db
+    .select({ value: count() })
+    .from(bets)
+    .where(and(eq(bets.userId, userId), eq(bets.status, "lost")));
+  const [refundedRow] = await db
+    .select({ value: count() })
+    .from(bets)
+    .where(and(eq(bets.userId, userId), eq(bets.status, "refunded")));
+  const [openRow] = await db
+    .select({ value: count() })
+    .from(bets)
+    .where(and(eq(bets.userId, userId), eq(bets.status, "open")));
+  const [stakeRow] = await db
+    .select({ value: sum(bets.stake) })
+    .from(bets)
+    .where(eq(bets.userId, userId));
+  const [payoutWonRow] = await db
+    .select({ value: sum(bets.payout) })
+    .from(bets)
+    .where(and(eq(bets.userId, userId), eq(bets.status, "won")));
+  const [payoutRefundRow] = await db
+    .select({ value: sum(bets.payout) })
+    .from(bets)
+    .where(and(eq(bets.userId, userId), eq(bets.status, "refunded")));
+
+  const totalStaked = Number(stakeRow?.value ?? 0);
+  const totalReturn = Number(payoutWonRow?.value ?? 0) + Number(payoutRefundRow?.value ?? 0);
+  const won = Number(wonRow?.value ?? 0);
+  const lost = Number(lostRow?.value ?? 0);
+  const refunded = Number(refundedRow?.value ?? 0);
+  const open = Number(openRow?.value ?? 0);
+  const settled = won + lost;
+
+  return {
+    totalStaked,
+    totalReturn,
+    netProfit: totalReturn - totalStaked,
+    roi: totalStaked > 0 ? ((totalReturn - totalStaked) / totalStaked) * 100 : null,
+    betCount: Number(countRow?.value ?? 0),
+    won,
+    lost,
+    refunded,
+    open,
+    winRate: settled > 0 ? (won / settled) * 100 : null,
+  };
+}
 
 export default async function LeaderboardPage() {
   const userRows = await db
@@ -36,105 +85,146 @@ export default async function LeaderboardPage() {
     .from(users)
     .orderBy(desc(users.capital));
 
-  // Compute net profit per user from bets table. Net profit = sum(payout)
-  // for settled bets minus sum(stake) of those same bets.
-  const rows: Row[] = [];
+  const rows: (LeaderboardRow & { avatarUrl: string | null })[] = [];
   for (const u of userRows) {
-    const [staked] = await db
-      .select({ s: sum(bets.stake), c: sum(bets.lockedOdds) })
-      .from(bets)
-      .where(eq(bets.userId, u.id));
-    const [payouts] = await db
-      .select({ p: sum(bets.payout) })
-      .from(bets)
-      .where(and(eq(bets.userId, u.id), eq(bets.status, "won")));
-    const [refunds] = await db
-      .select({ p: sum(bets.payout) })
-      .from(bets)
-      .where(and(eq(bets.userId, u.id), eq(bets.status, "refunded")));
-    const totalStaked = Number(staked?.s ?? 0);
-    const totalReturn = Number(payouts?.p ?? 0) + Number(refunds?.p ?? 0);
-    const betRows = await db.select({ id: bets.id }).from(bets).where(eq(bets.userId, u.id));
+    const s = await statsFor(u.id);
     rows.push({
       userId: u.id,
       username: u.username,
       avatarUrl: u.avatarUrl,
-      capital: u.capital,
-      totalStaked,
-      totalReturn,
-      netProfit: totalReturn - totalStaked,
-      betCount: betRows.length,
+      capital: Number(u.capital),
+      ...s,
     });
-    void staked?.c;
   }
-  rows.sort((a, b) => b.netProfit - a.netProfit || Number(b.capital) - Number(a.capital));
+  rows.sort((a, b) => b.netProfit - a.netProfit || b.capital - a.capital);
 
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-semibold">Žebříček</h1>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Porovnání hráčů</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {rows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Žádní hráči s daty.</p>
+          ) : (
+            <LeaderboardCharts rows={rows} />
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Tabulka</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <LeaderboardTable rows={rows} />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function LeaderboardTable({
+  rows,
+}: {
+  rows: (LeaderboardRow & { avatarUrl: string | null })[];
+}) {
   const fmt = new Intl.NumberFormat("cs-CZ", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Žebříček</h1>
-      <Card>
-        <CardHeader>
-          <CardTitle>Podle čistého zisku ze sázek</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>#</TableHead>
-                <TableHead>Hráč</TableHead>
-                <TableHead className="text-right">Sázek</TableHead>
-                <TableHead className="text-right">Vsazeno</TableHead>
-                <TableHead className="text-right">Vyplaceno</TableHead>
-                <TableHead className="text-right">Zisk</TableHead>
-                <TableHead className="text-right">Kapitál</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((r, i) => (
-                <TableRow key={r.userId}>
-                  <TableCell className="font-mono">{i + 1}</TableCell>
-                  <TableCell>
-                    <Link
-                      href={`/u/${r.username}`}
-                      className="flex items-center gap-2 hover:underline"
-                    >
-                      <Avatar className="h-6 w-6">
-                        {r.avatarUrl && <AvatarImage src={r.avatarUrl} alt={r.username} />}
-                        <AvatarFallback>{r.username.slice(0, 2).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium">{r.username}</span>
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-right">{r.betCount}</TableCell>
-                  <TableCell className="text-right font-mono">{fmt.format(r.totalStaked)}</TableCell>
-                  <TableCell className="text-right font-mono">{fmt.format(r.totalReturn)}</TableCell>
-                  <TableCell className="text-right font-mono">
-                    <Badge
-                      variant={r.netProfit > 0 ? "default" : r.netProfit < 0 ? "destructive" : "secondary"}
-                    >
-                      {r.netProfit > 0 ? "+" : ""}
-                      {fmt.format(r.netProfit)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-mono">{fmt.format(Number(r.capital))}</TableCell>
-                </TableRow>
-              ))}
-              {rows.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
-                    Žádní uživatelé
-                  </TableCell>
-                </TableRow>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>#</TableHead>
+          <TableHead>Hráč</TableHead>
+          <TableHead className="text-right">Sázek</TableHead>
+          <TableHead className="text-right">Výhry</TableHead>
+          <TableHead className="text-right">Prohry</TableHead>
+          <TableHead className="text-right">Úspěšnost</TableHead>
+          <TableHead className="text-right">Obrat</TableHead>
+          <TableHead className="text-right">ROI</TableHead>
+          <TableHead className="text-right">Zisk</TableHead>
+          <TableHead className="text-right">Kapitál</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((r, i) => (
+          <TableRow key={r.userId}>
+            <TableCell className="font-mono">{i + 1}</TableCell>
+            <TableCell>
+              <Link
+                href={`/u/${r.username}`}
+                className="flex items-center gap-2 hover:underline"
+              >
+                <Avatar className="h-6 w-6">
+                  {r.avatarUrl && <AvatarImage src={r.avatarUrl} alt={r.username} />}
+                  <AvatarFallback>{r.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <span className="font-medium">{r.username}</span>
+              </Link>
+            </TableCell>
+            <TableCell className="text-right">{r.betCount}</TableCell>
+            <TableCell className="text-right text-emerald-400">{r.won}</TableCell>
+            <TableCell className="text-right text-destructive/80">{r.lost}</TableCell>
+            <TableCell className="text-right font-mono">
+              {r.winRate != null ? `${r.winRate.toFixed(0)}%` : "—"}
+            </TableCell>
+            <TableCell className="text-right font-mono">
+              {fmt.format(r.totalStaked)}
+            </TableCell>
+            <TableCell className="text-right font-mono">
+              {r.roi != null ? (
+                <span
+                  className={
+                    r.roi > 0
+                      ? "text-emerald-400"
+                      : r.roi < 0
+                        ? "text-destructive"
+                        : ""
+                  }
+                >
+                  {r.roi > 0 ? "+" : ""}
+                  {r.roi.toFixed(1)}%
+                </span>
+              ) : (
+                "—"
               )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
+            </TableCell>
+            <TableCell className="text-right font-mono">
+              <Badge
+                variant={
+                  r.netProfit > 0
+                    ? "default"
+                    : r.netProfit < 0
+                      ? "destructive"
+                      : "secondary"
+                }
+                className={
+                  r.netProfit > 0
+                    ? "border-transparent bg-emerald-500/20 text-emerald-400"
+                    : undefined
+                }
+              >
+                {r.netProfit > 0 ? "+" : ""}
+                {fmt.format(r.netProfit)}
+              </Badge>
+            </TableCell>
+            <TableCell className="text-right font-mono">{fmt.format(r.capital)}</TableCell>
+          </TableRow>
+        ))}
+        {rows.length === 0 && (
+          <TableRow>
+            <TableCell colSpan={10} className="text-center text-muted-foreground">
+              Žádní uživatelé
+            </TableCell>
+          </TableRow>
+        )}
+      </TableBody>
+    </Table>
   );
 }
