@@ -45,7 +45,12 @@ for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     process.exit(0);
   } catch (err) {
     lastErr = err;
-    console.error(`✗ Attempt ${attempt} failed:`, err?.message ?? err);
+    console.error(`✗ Attempt ${attempt} failed:`);
+    console.error(`  message: ${err?.message}`);
+    console.error(`  code: ${err?.code ?? err?.cause?.code}`);
+    console.error(`  errno: ${err?.errno ?? err?.cause?.errno}`);
+    console.error(`  cause: ${err?.cause?.message ?? "(none)"}`);
+    if (err?.cause?.stack) console.error(`  cause stack:\n${err.cause.stack}`);
     if (attempt < MAX_ATTEMPTS) {
       const delay = attempt * 2000;
       console.log(`  retrying in ${delay}ms…`);

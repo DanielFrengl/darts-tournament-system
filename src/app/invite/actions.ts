@@ -20,7 +20,10 @@ export async function submitInvite(formData: FormData) {
   jar.set(INVITE_COOKIE, "1", {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    // We intentionally don't force Secure: behind reverse proxies the
+    // container sees the request as HTTP and the browser then refuses
+    // to send the cookie back, causing a redirect loop. HttpOnly +
+    // SameSite=Lax is sufficient for an invite-gate marker.
     path: "/",
     maxAge: ONE_YEAR_SECONDS,
   });
