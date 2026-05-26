@@ -50,6 +50,32 @@ export function TvDisplay({
     return () => window.removeEventListener("keydown", onKey);
   }, [router]);
 
+  // Show close button only when the cursor approaches the edges of the
+  // screen — otherwise the TV stays clean.
+  const [showClose, setShowClose] = useState(false);
+  useEffect(() => {
+    let hideTimer: ReturnType<typeof setTimeout> | null = null;
+    const onMove = (e: MouseEvent) => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const nearEdge =
+        e.clientX < 80 ||
+        e.clientX > w - 80 ||
+        e.clientY < 80 ||
+        e.clientY > h - 80;
+      if (nearEdge) {
+        setShowClose(true);
+        if (hideTimer) clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => setShowClose(false), 2500);
+      }
+    };
+    window.addEventListener("mousemove", onMove);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      if (hideTimer) clearTimeout(hideTimer);
+    };
+  }, []);
+
   const elapsed = useElapsed(startedAt);
   const [initialFactIndex] = useState(() => Math.floor(Date.now() / 12_000));
   const factIndex = useRotatingIndex(initialFactIndex, DARTS_FACTS.length, 12_000);
@@ -70,7 +96,11 @@ export function TvDisplay({
         href="/tournament"
         title="Zavřít (ESC)"
         aria-label="Zavřít TV display"
-        className="fixed bottom-4 right-4 z-50 flex h-10 items-center gap-2 rounded-full border border-white/15 bg-black/70 px-4 text-xs uppercase tracking-wider text-white/70 shadow-lg backdrop-blur transition-colors hover:border-white/40 hover:bg-black/90 hover:text-white"
+        className={`fixed bottom-4 right-4 z-50 flex h-10 items-center gap-2 rounded-full border border-white/15 bg-black/70 px-4 text-xs uppercase tracking-wider text-white/70 shadow-lg backdrop-blur transition-all duration-300 hover:border-white/40 hover:bg-black/90 hover:text-white ${
+          showClose
+            ? "pointer-events-auto translate-y-0 opacity-100"
+            : "pointer-events-none translate-y-2 opacity-0"
+        }`}
       >
         <X className="h-4 w-4" />
         Zavřít · ESC

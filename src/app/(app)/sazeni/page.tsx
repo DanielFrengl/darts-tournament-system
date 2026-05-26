@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sum } from "drizzle-orm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { db } from "@/db/client";
@@ -16,9 +16,14 @@ import {
 import { auth } from "@/lib/auth";
 import { tournamentService } from "@/lib/tournament";
 import {
-  BetBuilder,
+  type BuilderGroupVM,
   type BuilderMarketVM,
 } from "@/components/betting/BetBuilder";
+import {
+  SazeniSurface,
+  type SingleGroupVM,
+} from "@/components/betting/SazeniSurface";
+import { type MarketCardVM } from "@/components/betting/MarketCard";
 import { BetsByMatch, type MatchGroupVM, type BetEntry } from "@/components/betting/BetsByMatch";
 import { BetStatusBadge } from "@/components/betting/BetStatusBadge";
 
@@ -60,10 +65,10 @@ export default async function SazeniPage() {
     .where(eq(users.id, session.user.id));
   const capital = Number(me?.capital ?? 0);
 
-  // --- Builder data (only when tournament is active) -----------------------
-  const groups: Awaited<ReturnType<typeof buildBuilderGroups>> = t
-    ? await buildBuilderGroups(t.id)
-    : [];
+  // --- Market data (only when tournament is active) -----------------------
+  const surfaces = t
+    ? await buildBettingSurfaces(t.id)
+    : { singleGroups: [], builderGroups: [] };
 
   // --- My bets data --------------------------------------------------------
   const myBetsData = await loadMyBetsData(session.user.id);
@@ -88,15 +93,10 @@ export default async function SazeniPage() {
               Žádný aktivní turnaj.
             </CardContent>
           </Card>
-        ) : groups.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6 text-sm text-muted-foreground">
-              Žádné otevřené trhy.
-            </CardContent>
-          </Card>
         ) : (
-          <BetBuilder
-            groups={groups}
+          <SazeniSurface
+            singleGroups={surfaces.singleGroups}
+            builderGroups={surfaces.builderGroups}
             capital={capital}
             maxStakePct={t.configJson.maxStakePct}
           />
@@ -216,7 +216,10 @@ export default async function SazeniPage() {
   );
 }
 
-async function buildBuilderGroups(tournamentId: string) {
+async function buildBettingSurfaces(tournamentId: string): Promise<{
+  singleGroups: SingleGroupVM[];
+  builderGroups: BuilderGroupVM[];
+}> {
   const openMarkets = await db
     .select()
     .from(marketsTable)
@@ -224,7 +227,7 @@ async function buildBuilderGroups(tournamentId: string) {
       and(eq(marketsTable.tournamentId, tournamentId), eq(marketsTable.status, "open"))
     )
     .orderBy(asc(marketsTable.scope), asc(marketsTable.opensAt));
-  if (openMarkets.length === 0) return [];
+  if (openMarkets.length === 0) return { singleGroups: [], builderGroups: [] };
 
   const marketIds = openMarkets.map((m) => m.id);
   const sels = await db
@@ -253,23 +256,35 @@ async function buildBuilderGroups(tournamentId: string) {
     : [];
   const legNumberById = new Map(legRows.map((l) => [l.id, l.legNumber]));
 
+  // Aggregated open-bet stake per selection so single-mode cards can show pools.
+  const allSelectionIds = sels.map((s) => s.id);
+  const poolPerSelection = new Map<string, number>();
+  if (allSelectionIds.length) {
+    const sumRows = await db
+      .select({ selectionId: bets.selectionId, total: sum(bets.stake) })
+      .from(bets)
+      .where(
+        and(inArray(bets.selectionId, allSelectionIds), eq(bets.status, "open"))
+      )
+      .groupBy(bets.selectionId);
+    for (const r of sumRows) {
+      poolPerSelection.set(r.selectionId, Number(r.total ?? 0));
+    }
+  }
+
   type GroupAccum = {
     key: string;
     label: string;
     sublabel: string | null;
     sortKey: number;
-    markets: BuilderMarketVM[];
+    matchId: string | null;
+    singleMarkets: MarketCardVM[];
+    builderMarkets: BuilderMarketVM[];
   };
   const groupsMap = new Map<string, GroupAccum>();
 
   for (const m of openMarkets) {
-    const mySels = sels
-      .filter((s) => s.marketId === m.id)
-      .map((s) => ({
-        id: s.id,
-        label: s.label,
-        finalOdds: Number(s.finalOdds),
-      }));
+    const mySels = sels.filter((s) => s.marketId === m.id);
     if (mySels.length === 0) continue;
 
     let groupKey: string;
@@ -277,6 +292,7 @@ async function buildBuilderGroups(tournamentId: string) {
     let sublabel: string | null = null;
     let sortKey: number;
     let marketTitle: string;
+    let groupMatchId: string | null = null;
 
     if (m.matchId) {
       const match = matchById.get(m.matchId);
@@ -287,6 +303,7 @@ async function buildBuilderGroups(tournamentId: string) {
       label = `${a} vs ${b}`;
       sublabel = PHASE_LABEL[match.phase] ?? match.phase;
       sortKey = match.status === "live" ? 0 : 1;
+      groupMatchId = match.id;
       const legNum = m.legId ? legNumberById.get(m.legId) ?? 0 : 0;
       marketTitle =
         MATCH_MARKET_TITLES[m.type] === "Leg" && legNum
@@ -302,15 +319,65 @@ async function buildBuilderGroups(tournamentId: string) {
 
     let g = groupsMap.get(groupKey);
     if (!g) {
-      g = { key: groupKey, label, sublabel, sortKey, markets: [] };
+      g = {
+        key: groupKey,
+        label,
+        sublabel,
+        sortKey,
+        matchId: groupMatchId,
+        singleMarkets: [],
+        builderMarkets: [],
+      };
       groupsMap.set(groupKey, g);
     }
-    g.markets.push({ id: m.id, title: marketTitle, selections: mySels });
+
+    const builderSels = mySels.map((s) => ({
+      id: s.id,
+      label: s.label,
+      finalOdds: Number(s.finalOdds),
+    }));
+    const singleSels = mySels.map((s) => ({
+      id: s.id,
+      label: s.label,
+      finalOdds: Number(s.finalOdds),
+      isWinner: s.isWinner ?? null,
+      pool: poolPerSelection.get(s.id) ?? 0,
+    }));
+    const totalPool = singleSels.reduce((acc, s) => acc + s.pool, 0);
+
+    g.singleMarkets.push({
+      id: m.id,
+      title: marketTitle,
+      status: m.status,
+      selections: singleSels,
+      totalPool,
+    });
+    g.builderMarkets.push({
+      id: m.id,
+      title: marketTitle,
+      selections: builderSels,
+    });
   }
 
-  return [...groupsMap.values()].sort(
+  const ordered = [...groupsMap.values()].sort(
     (a, b) => a.sortKey - b.sortKey || a.label.localeCompare(b.label, "cs")
   );
+
+  return {
+    singleGroups: ordered.map((g) => ({
+      key: g.key,
+      label: g.label,
+      sublabel: g.sublabel,
+      matchId: g.matchId,
+      markets: g.singleMarkets,
+    })),
+    builderGroups: ordered.map((g) => ({
+      key: g.key,
+      label: g.label,
+      sublabel: g.sublabel,
+      markets: g.builderMarkets,
+    })),
+  };
 }
 
 async function loadMyBetsData(userId: string) {
