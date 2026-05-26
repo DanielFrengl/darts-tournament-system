@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Home, Trophy, Receipt, Award, Shield, Settings, Users, FileText, Tv } from "lucide-react";
+import { Home, Trophy, Receipt, Award, Shield, Settings, Users, FileText, Tv, Layers } from "lucide-react";
 
 type Role = "user" | "admin";
 
@@ -9,6 +9,7 @@ type NavItem = { href: string; label: string; icon: ReactNode };
 const userItems: NavItem[] = [
   { href: "/", label: "Dashboard", icon: <Home className="h-4 w-4" /> },
   { href: "/tournament", label: "Turnaj", icon: <Trophy className="h-4 w-4" /> },
+  { href: "/bet-builder", label: "Bet builder", icon: <Layers className="h-4 w-4" /> },
   { href: "/bets", label: "Moje sázky", icon: <Receipt className="h-4 w-4" /> },
   { href: "/leaderboard", label: "Žebříček", icon: <Award className="h-4 w-4" /> },
   { href: "/display", label: "TV Display", icon: <Tv className="h-4 w-4" /> },

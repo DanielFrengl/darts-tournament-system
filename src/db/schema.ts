@@ -251,6 +251,26 @@ export const marketSelections = pgTable(
   })
 );
 
+export const parlays = pgTable(
+  "parlays",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    stake: numeric("stake", { precision: 12, scale: 2 }).notNull(),
+    lockedOdds: numeric("locked_odds", { precision: 10, scale: 4 }).notNull(),
+    status: betStatusEnum("status").notNull().default("open"),
+    payout: numeric("payout", { precision: 12, scale: 2 }),
+    placedAt: timestamp("placed_at", { withTimezone: true }).notNull().defaultNow(),
+    settledAt: timestamp("settled_at", { withTimezone: true }),
+  },
+  (t) => ({
+    userIdx: index("parlays_user_idx").on(t.userId),
+    statusIdx: index("parlays_status_idx").on(t.status),
+  })
+);
+
 export const bets = pgTable(
   "bets",
   {
@@ -265,6 +285,7 @@ export const bets = pgTable(
     lockedOdds: numeric("locked_odds", { precision: 8, scale: 4 }).notNull(),
     status: betStatusEnum("status").notNull().default("open"),
     payout: numeric("payout", { precision: 12, scale: 2 }),
+    parlayId: uuid("parlay_id").references(() => parlays.id, { onDelete: "cascade" }),
     placedAt: timestamp("placed_at", { withTimezone: true }).notNull().defaultNow(),
     settledAt: timestamp("settled_at", { withTimezone: true }),
   },
@@ -272,6 +293,7 @@ export const bets = pgTable(
     userIdx: index("bets_user_idx").on(t.userId),
     selectionIdx: index("bets_selection_idx").on(t.selectionId),
     statusIdx: index("bets_status_idx").on(t.status),
+    parlayIdx: index("bets_parlay_idx").on(t.parlayId),
   })
 );
 
@@ -305,3 +327,5 @@ export type MarketSelection = typeof marketSelections.$inferSelect;
 export type NewMarketSelection = typeof marketSelections.$inferInsert;
 export type Bet = typeof bets.$inferSelect;
 export type NewBet = typeof bets.$inferInsert;
+export type Parlay = typeof parlays.$inferSelect;
+export type NewParlay = typeof parlays.$inferInsert;
