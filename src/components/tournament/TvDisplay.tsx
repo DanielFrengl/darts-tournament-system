@@ -230,17 +230,76 @@ function BigMatchCard({ match }: { match: MatchListItem }) {
         </p>
       </div>
       {(match.oddsA != null || match.totalPool > 0) && (
-        <div className="mt-4 flex items-center justify-between gap-6 border-t border-white/10 pt-3 text-sm">
-          <OddsPill name={match.playerA} odds={match.oddsA} />
-          <span className="text-xs uppercase tracking-widest text-white/40">
-            Vsazeno{" "}
-            <span className="ml-1 font-mono text-base text-white">
-              {match.totalPool > 0 ? poolFmt.format(match.totalPool) : "—"}
+        <div className="mt-4 space-y-3 border-t border-white/10 pt-3">
+          <div className="flex items-center justify-between gap-6 text-sm">
+            <OddsPill name={match.playerA} odds={match.oddsA} />
+            <span className="text-xs uppercase tracking-widest text-white/40">
+              Vsazeno{" "}
+              <span className="ml-1 font-mono text-base text-white">
+                {match.totalPool > 0 ? poolFmt.format(match.totalPool) : "—"}
+              </span>
             </span>
-          </span>
-          <OddsPill name={match.playerB} odds={match.oddsB} />
+            <OddsPill name={match.playerB} odds={match.oddsB} />
+          </div>
+          {match.totalPool > 0 && (
+            <PoolSplitBar
+              poolA={match.poolA}
+              poolB={match.poolB}
+              total={match.totalPool}
+            />
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+function PoolSplitBar({
+  poolA,
+  poolB,
+  total,
+}: {
+  poolA: number;
+  poolB: number;
+  total: number;
+}) {
+  const knownTotal = poolA + poolB;
+  // If there are other markets (correct score, legs) contributing to total,
+  // the "rest" segment captures them so the bar still sums to 100%.
+  const rest = Math.max(0, total - knownTotal);
+  const pctA = total > 0 ? (poolA / total) * 100 : 0;
+  const pctB = total > 0 ? (poolB / total) * 100 : 0;
+  const pctRest = total > 0 ? (rest / total) * 100 : 0;
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-white/50">
+        <span>{poolFmt.format(poolA)} · {pctA.toFixed(0)}%</span>
+        {rest > 0 && (
+          <span className="text-white/40">
+            ostatní {pctRest.toFixed(0)}%
+          </span>
+        )}
+        <span>{pctB.toFixed(0)}% · {poolFmt.format(poolB)}</span>
+      </div>
+      <div className="flex h-2 overflow-hidden rounded-full bg-white/10">
+        <div
+          className="bg-sky-400 transition-all"
+          style={{ width: `${pctA}%` }}
+          aria-hidden
+        />
+        {rest > 0 && (
+          <div
+            className="bg-white/25 transition-all"
+            style={{ width: `${pctRest}%` }}
+            aria-hidden
+          />
+        )}
+        <div
+          className="bg-amber-400 transition-all"
+          style={{ width: `${pctB}%` }}
+          aria-hidden
+        />
+      </div>
     </div>
   );
 }
@@ -327,9 +386,16 @@ function NextUpCard({ match }: { match: MatchListItem }) {
         </div>
       )}
       {match.totalPool > 0 && (
-        <p className="mt-1 text-right text-xs text-white/40">
-          Pool: {poolFmt.format(match.totalPool)}
-        </p>
+        <div className="mt-2 space-y-1">
+          <PoolSplitBar
+            poolA={match.poolA}
+            poolB={match.poolB}
+            total={match.totalPool}
+          />
+          <p className="text-right text-xs text-white/40">
+            Pool: {poolFmt.format(match.totalPool)}
+          </p>
+        </div>
       )}
     </div>
   );

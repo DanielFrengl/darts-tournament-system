@@ -23,6 +23,8 @@ export type MatchListItem = {
   selectionIdA: string | null;
   selectionIdB: string | null;
   totalPool: number;
+  poolA: number;
+  poolB: number;
 };
 
 export function MatchListCard({

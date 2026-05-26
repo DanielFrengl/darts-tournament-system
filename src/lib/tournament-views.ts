@@ -145,6 +145,20 @@ export async function buildMatchList(tournamentId: string): Promise<MatchListIte
         .from(marketSelections)
         .where(inArray(marketSelections.marketId, marketIds))
     : [];
+  // Pool per match-winner selection (so we can split totalPool A/B).
+  const poolBySelection = new Map<string, number>();
+  const selIds = sels.map((s) => s.id);
+  if (selIds.length) {
+    const rows = await db
+      .select({ selectionId: bets.selectionId, total: sum(bets.stake) })
+      .from(bets)
+      .where(and(inArray(bets.selectionId, selIds), eq(bets.status, "open")))
+      .groupBy(bets.selectionId);
+    for (const r of rows) {
+      poolBySelection.set(r.selectionId, Number(r.total ?? 0));
+    }
+  }
+
   const oddsByMatchByPlayer = new Map<
     string,
     Map<string, { odds: number; selectionId: string }>
@@ -231,6 +245,8 @@ export async function buildMatchList(tournamentId: string): Promise<MatchListIte
       selectionIdA: a?.selectionId ?? null,
       selectionIdB: b?.selectionId ?? null,
       totalPool: poolPerMatch.get(m.id) ?? 0,
+      poolA: a?.selectionId ? poolBySelection.get(a.selectionId) ?? 0 : 0,
+      poolB: b?.selectionId ? poolBySelection.get(b.selectionId) ?? 0 : 0,
     };
   });
 }
