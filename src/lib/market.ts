@@ -426,6 +426,12 @@ export class MarketService {
         .where(eq(marketSelections.id, sel.id));
     }
     publish(`market:${marketId}`, "odds_changed", { totalPool });
+    // Also publish on the tournament channel so any open page (Sázení,
+    // /tournament, dashboard) refreshes when anyone in any market bets.
+    publish(`tournament:${m.tournamentId}`, "odds_changed", {
+      marketId,
+      totalPool,
+    });
   }
 
   /**

@@ -310,6 +310,7 @@ export class BettingService {
             })
             .where(eq(bets.id, b.id));
           await this.capital.credit(b.userId, payout, "bet_won", { betId: b.id });
+          publish(`user:${b.userId}`, "bet_won", { payout, kind: "single" });
         }
       }
     }
@@ -386,6 +387,7 @@ export class BettingService {
         })
         .where(eq(parlays.id, parlayId));
       await this.capital.credit(p.userId, refund, "bet_refund");
+      publish(`user:${p.userId}`, "bet_refunded", { refund, kind: "parlay" });
       return;
     }
     if (childBets.some((b) => b.status === "lost")) {
@@ -393,6 +395,10 @@ export class BettingService {
         .update(parlays)
         .set({ status: "lost", payout: "0.00", settledAt: settleAt })
         .where(eq(parlays.id, parlayId));
+      publish(`user:${p.userId}`, "bet_lost", {
+        kind: "parlay",
+        stake: Number(p.stake),
+      });
       return;
     }
     // All children won.
@@ -406,6 +412,11 @@ export class BettingService {
       })
       .where(eq(parlays.id, parlayId));
     await this.capital.credit(p.userId, payout, "bet_won");
+    publish(`user:${p.userId}`, "bet_won", {
+      payout,
+      kind: "parlay",
+      legs: childBets.length,
+    });
   }
 
   async listBets(userId: string, limit = 50): Promise<Bet[]> {
