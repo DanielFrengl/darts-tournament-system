@@ -1,18 +1,42 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Home, Trophy, Receipt, Award, Shield, Settings, Users, FileText, Tv, Layers } from "lucide-react";
+import {
+  Home,
+  Trophy,
+  Receipt,
+  Award,
+  Shield,
+  Settings,
+  Users,
+  FileText,
+  Tv,
+  Layers,
+} from "lucide-react";
 
 type Role = "user" | "admin";
 
 type NavItem = { href: string; label: string; icon: ReactNode };
+type NavSection = { title?: string; items: NavItem[] };
 
-const userItems: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: <Home className="h-4 w-4" /> },
-  { href: "/tournament", label: "Turnaj", icon: <Trophy className="h-4 w-4" /> },
-  { href: "/bet-builder", label: "Bet builder", icon: <Layers className="h-4 w-4" /> },
-  { href: "/bets", label: "Moje sázky", icon: <Receipt className="h-4 w-4" /> },
-  { href: "/leaderboard", label: "Žebříček", icon: <Award className="h-4 w-4" /> },
-  { href: "/display", label: "TV Display", icon: <Tv className="h-4 w-4" /> },
+const sections: NavSection[] = [
+  {
+    items: [{ href: "/", label: "Dashboard", icon: <Home className="h-4 w-4" /> }],
+  },
+  {
+    title: "Turnaj",
+    items: [
+      { href: "/tournament", label: "Přehled", icon: <Trophy className="h-4 w-4" /> },
+      { href: "/leaderboard", label: "Žebříček", icon: <Award className="h-4 w-4" /> },
+      { href: "/display", label: "TV Display", icon: <Tv className="h-4 w-4" /> },
+    ],
+  },
+  {
+    title: "Sázení",
+    items: [
+      { href: "/bet-builder", label: "Bet builder", icon: <Layers className="h-4 w-4" /> },
+      { href: "/bets", label: "Moje sázky", icon: <Receipt className="h-4 w-4" /> },
+    ],
+  },
 ];
 
 const adminItems: NavItem[] = [
@@ -36,7 +60,7 @@ export function SidebarNav({
 }) {
   return (
     <div className="flex h-full flex-col gap-2 p-4">
-      <Link href="/" onClick={onNavigate} className="mb-6 flex items-center gap-2">
+      <Link href="/" onClick={onNavigate} className="mb-4 flex items-center gap-2">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={logoUrl}
@@ -45,11 +69,22 @@ export function SidebarNav({
         />
         <span className="truncate text-base font-bold leading-tight">{systemName}</span>
       </Link>
-      <nav className="space-y-1">
-        {userItems.map((item) => (
-          <SidebarLink key={item.href} {...item} onNavigate={onNavigate} />
-        ))}
-      </nav>
+
+      {sections.map((section, i) => (
+        <div key={i} className="space-y-1">
+          {section.title && (
+            <p className="mt-3 px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {section.title}
+            </p>
+          )}
+          <nav className="space-y-1">
+            {section.items.map((item) => (
+              <SidebarLink key={item.href} {...item} onNavigate={onNavigate} />
+            ))}
+          </nav>
+        </div>
+      ))}
+
       {role === "admin" && (
         <>
           <div className="my-2 border-t" />
