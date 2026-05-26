@@ -42,7 +42,18 @@ export async function onLegStarted(legId: string, matchId: string, legNumber: nu
   await marketService.createForLeg(legId);
   publish(`match:${matchId}`, "leg_started", { legId, legNumber });
   const [m] = await db.select().from(matches).where(eq(matches.id, matchId));
-  if (m) publish(`tournament:${m.tournamentId}`, "match_updated", { matchId });
+  if (m) {
+    if (legNumber === 1) {
+      // Toast-worthy: match transitions to live.
+      const summary = await buildMatchSummary(matchId);
+      publish(`tournament:${m.tournamentId}`, "match_started", {
+        matchId,
+        summary,
+      });
+    } else {
+      publish(`tournament:${m.tournamentId}`, "match_updated", { matchId });
+    }
+  }
 }
 
 /**
@@ -112,6 +123,11 @@ export async function onLegFinished({
   if (m) {
     publish(`tournament:${m.tournamentId}`, "standings_updated", { matchId });
     if (matchFinished) {
+      const summary = await buildMatchSummary(matchId);
+      publish(`tournament:${m.tournamentId}`, "match_finished", {
+        matchId,
+        summary,
+      });
       publish(`tournament:${m.tournamentId}`, "bracket_updated", { matchId });
     }
   }
@@ -122,7 +138,45 @@ export async function onMatchCancelled(matchId: string): Promise<void> {
   await bettingService.refundSelections(ids);
   publish(`match:${matchId}`, "cancelled");
   const [m] = await db.select().from(matches).where(eq(matches.id, matchId));
-  if (m) publish(`tournament:${m.tournamentId}`, "match_updated", { matchId });
+  if (m) {
+    const summary = await buildMatchSummary(matchId);
+    publish(`tournament:${m.tournamentId}`, "match_cancelled", {
+      matchId,
+      summary,
+    });
+  }
+}
+
+/**
+ * "Daniel vs Karel" or, when finished, "Daniel 3:1 Karel — vyhrál Daniel".
+ * Used in tournament-channel events so the client can toast without
+ * another round trip.
+ */
+async function buildMatchSummary(matchId: string): Promise<string | null> {
+  const [m] = await db.select().from(matches).where(eq(matches.id, matchId));
+  if (!m) return null;
+  const ids = [m.playerAId, m.playerBId].filter((x): x is string => !!x);
+  if (ids.length < 2) return null;
+  const { players: playersTable } = await import("@/db/schema");
+  const ps = await db
+    .select()
+    .from(playersTable)
+    .where(eq(playersTable.id, ids[0]!));
+  const ps2 = await db
+    .select()
+    .from(playersTable)
+    .where(eq(playersTable.id, ids[1]!));
+  const a = ps[0];
+  const b = ps2[0];
+  if (!a || !b) return null;
+  if (m.status === "finished" && m.winnerId) {
+    const winnerName = m.winnerId === a.id ? a.name : b.name;
+    return `${a.name} ${m.scoreA}:${m.scoreB} ${b.name} — vyhrál ${winnerName}`;
+  }
+  if (m.status === "cancelled") {
+    return `${a.name} vs ${b.name}`;
+  }
+  return `${a.name} vs ${b.name}`;
 }
 
 async function selectionsOfMarketByLeg(legId: string): Promise<string[]> {
@@ -246,7 +300,16 @@ async function maybeAutoFinishTournament(matchId: string): Promise<void> {
   const allTourSelections = await tournamentScopedSelectionIds(t.id);
   const losing = allTourSelections.filter((id) => !winning.includes(id));
   await bettingService.settleSelections(winning, losing);
-  publish(`tournament:${t.id}`, "tournament_finished");
+  const { players: playersTable } = await import("@/db/schema");
+  const [winnerPlayer] = await db
+    .select({ name: playersTable.name })
+    .from(playersTable)
+    .where(eq(playersTable.id, m.winnerId));
+  publish(`tournament:${t.id}`, "tournament_finished", {
+    summary: winnerPlayer
+      ? `Vítěz: ${winnerPlayer.name}`
+      : undefined,
+  });
 }
 
 async function tournamentScopedSelectionIds(tournamentId: string): Promise<string[]> {
