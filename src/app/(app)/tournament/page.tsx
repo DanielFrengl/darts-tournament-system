@@ -23,6 +23,7 @@ import { BracketView } from "@/components/tournament/BracketView";
 import { MatchListCard } from "@/components/tournament/MatchListCard";
 import { MarketCard, type MarketCardVM } from "@/components/betting/MarketCard";
 import { TournamentLiveSync } from "@/components/tournament/TournamentLiveSync";
+import { LiveDot } from "@/components/ui/live-dot";
 
 export default async function TournamentOverviewPage() {
   const session = await auth();
@@ -81,7 +82,10 @@ export default async function TournamentOverviewPage() {
 
       {live.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold">🔴 Živě</h2>
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            <LiveDot />
+            Živě
+          </h2>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {live.map((m) => (
               <MatchListCard

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { LiveDot } from "@/components/ui/live-dot";
 import { BetStatusBadge, type BetStatus } from "./BetStatusBadge";
 
 export type BetEntry = {
@@ -161,8 +162,14 @@ function MatchStatusBadge({
 }: {
   status: "scheduled" | "live" | "finished" | "cancelled";
 }) {
-  if (status === "live") return <Badge>Live</Badge>;
-  if (status === "finished") return <Badge variant="secondary">Finished</Badge>;
-  if (status === "cancelled") return <Badge variant="destructive">Cancelled</Badge>;
-  return <Badge variant="outline">Scheduled</Badge>;
+  if (status === "live")
+    return (
+      <Badge className="flex items-center gap-1.5">
+        <LiveDot size="sm" />
+        Živě
+      </Badge>
+    );
+  if (status === "finished") return <Badge variant="secondary">Dohráno</Badge>;
+  if (status === "cancelled") return <Badge variant="destructive">Zrušeno</Badge>;
+  return <Badge variant="outline">Naplánováno</Badge>;
 }

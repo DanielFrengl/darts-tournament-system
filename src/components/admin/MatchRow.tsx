@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LiveDot } from "@/components/ui/live-dot";
 import {
   startLegAction,
   recordLegAction,
@@ -99,7 +100,13 @@ export function MatchRow({
             </span>
           )}
           <Badge variant="outline">{match.phase}</Badge>
-          <Badge variant={isLive ? "default" : "secondary"}>{match.status}</Badge>
+          <Badge
+            variant={isLive ? "default" : "secondary"}
+            className={isLive ? "flex items-center gap-1.5" : undefined}
+          >
+            {isLive && <LiveDot size="sm" />}
+            {match.status}
+          </Badge>
           <span className="text-muted-foreground">best of {match.bestOf}</span>
         </div>
         {!isFinished && match.status !== "cancelled" && (

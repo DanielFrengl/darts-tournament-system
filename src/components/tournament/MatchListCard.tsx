@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight } from "lucide-react";
 import { BetDialog, type BetTarget } from "@/components/betting/BetDialog";
+import { LiveDot } from "@/components/ui/live-dot";
 
 export type MatchListItem = {
   id: string;
@@ -61,7 +62,8 @@ export function MatchListCard({
               {match.phaseLabel}
             </Badge>
             {live && (
-              <Badge variant="default" className="animate-pulse text-xs">
+              <Badge variant="default" className="flex items-center gap-1.5 text-xs">
+                <LiveDot size="sm" />
                 LIVE
               </Badge>
             )}

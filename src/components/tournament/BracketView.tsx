@@ -1,3 +1,5 @@
+import { LiveDot } from "@/components/ui/live-dot";
+
 export type BracketMatchVM = {
   id: string;
   phase: "quarter" | "semi" | "final" | "third_place";
@@ -187,8 +189,9 @@ function MatchSlot({
         isTv={isTv}
       />
       <div
-        className={`mt-1 text-right text-[10px] uppercase tracking-wider ${isTv ? "text-white/40" : "text-muted-foreground"}`}
+        className={`mt-1 flex items-center justify-end gap-1.5 text-[10px] uppercase tracking-wider ${isTv ? "text-white/40" : "text-muted-foreground"}`}
       >
+        {match.status === "live" && <LiveDot size="sm" />}
         {statusLabel(match.status)}
       </div>
     </div>

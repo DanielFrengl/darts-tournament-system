@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { DARTS_FACTS } from "@/lib/darts-facts";
 import type { MatchListItem } from "@/components/tournament/MatchListCard";
 import { BracketView, type BracketMatchVM } from "@/components/tournament/BracketView";
+import { LiveDot } from "@/components/ui/live-dot";
 
 const poolFmt = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
 
@@ -73,7 +74,10 @@ export function TvDisplay({
         <section className="space-y-4 lg:col-span-2">
           {live.length > 0 ? (
             <>
-              <h2 className="text-xl font-semibold text-red-400">🔴 Živě</h2>
+              <h2 className="flex items-center gap-2 text-xl font-semibold text-red-400">
+                <LiveDot size="lg" />
+                Živě
+              </h2>
               <div className="space-y-3">
                 {live.map((m) => (
                   <BigMatchCard key={m.id} match={m} />

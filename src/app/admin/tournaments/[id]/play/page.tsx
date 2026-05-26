@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MatchRow, type Match as MatchVM } from "@/components/admin/MatchRow";
 import { WizardNav } from "@/components/admin/WizardNav";
+import { LiveDot } from "@/components/ui/live-dot";
 
 const PHASE_ORDER: Record<string, number> = {
   group: 0,
@@ -168,9 +169,15 @@ export default async function PlayPage({
       />
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-2xl font-semibold">{t.name}</h1>
-        <p className="text-sm text-muted-foreground">
-          {finishedCount}/{sorted.length} dohráno
-          {liveCount > 0 && <span className="text-foreground"> · {liveCount} živě</span>}
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>
+            {finishedCount}/{sorted.length} dohráno
+          </span>
+          {liveCount > 0 && (
+            <span className="flex items-center gap-1.5 text-foreground">
+              · <LiveDot size="sm" /> {liveCount} živě
+            </span>
+          )}
         </p>
       </div>
 
