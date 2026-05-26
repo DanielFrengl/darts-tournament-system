@@ -109,8 +109,10 @@ export function BracketView({
                 key={c.key}
                 d={c.d}
                 fill="none"
-                stroke={isTv ? "rgba(255,255,255,0.25)" : "var(--border)"}
-                strokeWidth={2}
+                stroke={isTv ? "rgba(255,255,255,0.45)" : "var(--border)"}
+                strokeWidth={isTv ? 2.5 : 2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
               />
             ))}
           </svg>
@@ -171,10 +173,22 @@ function MatchSlot({
   const isTv = variant === "tv";
   const isLive = match.status === "live";
   const cardClass = isTv
-    ? `flex h-full flex-col justify-center rounded-lg border bg-white/5 px-3 py-1.5 shadow-sm ${isLive ? "border-red-400/60" : "border-white/15"}`
-    : `flex h-full flex-col justify-center rounded-lg border bg-card px-3 py-1.5 shadow-sm ${isLive ? "border-primary" : "border-border"}`;
+    ? `relative flex h-full flex-col justify-center rounded-lg border bg-white/5 px-3 py-1.5 shadow-sm ${
+        isLive
+          ? "border-red-400 ring-2 ring-red-500/60 shadow-[0_0_20px_rgba(239,68,68,0.6)] animate-pulse-glow"
+          : "border-white/15"
+      }`
+    : `relative flex h-full flex-col justify-center rounded-lg border bg-card px-3 py-1.5 shadow-sm ${
+        isLive ? "border-primary ring-1 ring-primary/30" : "border-border"
+      }`;
   return (
     <div className={cardClass}>
+      {isLive && isTv && (
+        <span className="absolute -top-2 right-2 flex items-center gap-1 rounded-full border border-red-400 bg-red-500 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-white shadow-lg">
+          <LiveDotInline />
+          Live
+        </span>
+      )}
       <SlotLine
         name={match.playerA?.name ?? "—"}
         score={match.scoreA}
@@ -216,6 +230,15 @@ function SlotLine({
       <span className="truncate">{name}</span>
       <span className="ml-2 font-mono">{score}</span>
     </div>
+  );
+}
+
+function LiveDotInline() {
+  return (
+    <span className="relative inline-flex h-1.5 w-1.5 shrink-0">
+      <span className="absolute inset-0 animate-ping rounded-full bg-white/80" />
+      <span className="relative inline-block h-1.5 w-1.5 rounded-full bg-white" />
+    </span>
   );
 }
 

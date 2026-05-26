@@ -139,3 +139,17 @@
     @apply font-sans;
   }
 }
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.4),
+                0 0 0 2px rgba(239, 68, 68, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(239, 68, 68, 0.9),
+                0 0 0 3px rgba(239, 68, 68, 0.9);
+  }
+}
+.animate-pulse-glow {
+  animation: pulse-glow 1.8s ease-in-out infinite;
+}
