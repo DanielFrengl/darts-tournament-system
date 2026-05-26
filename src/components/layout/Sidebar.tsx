@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import {
   Home,
   Trophy,
-  Receipt,
   Award,
   Shield,
   Settings,
@@ -33,8 +32,7 @@ const sections: NavSection[] = [
   {
     title: "Sázení",
     items: [
-      { href: "/bet-builder", label: "Bet builder", icon: <Layers className="h-4 w-4" /> },
-      { href: "/bets", label: "Moje sázky", icon: <Receipt className="h-4 w-4" /> },
+      { href: "/sazeni", label: "Sázení", icon: <Layers className="h-4 w-4" /> },
     ],
   },
 ];
