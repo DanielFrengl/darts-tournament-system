@@ -9,6 +9,7 @@ import { tournamentService } from "@/lib/tournament";
 import { userStats } from "@/lib/user-stats";
 import { ProfileCard } from "@/components/user/ProfileCard";
 import { ProfileStats } from "@/components/user/ProfileStats";
+import { TournamentLiveSync } from "@/components/tournament/TournamentLiveSync";
 
 export default async function UserProfilePage({
   params,
@@ -39,6 +40,7 @@ export default async function UserProfilePage({
 
   return (
     <div className="max-w-3xl space-y-4">
+      {active && <TournamentLiveSync tournamentId={active.id} />}
       <ProfileCard {...user} displayName={displayName(user)} />
       <Card>
         <CardHeader>

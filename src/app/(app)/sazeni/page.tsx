@@ -26,6 +26,7 @@ import {
 import { type MarketCardVM } from "@/components/betting/MarketCard";
 import { BetsByMatch, type MatchGroupVM, type BetEntry } from "@/components/betting/BetsByMatch";
 import { BetStatusBadge } from "@/components/betting/BetStatusBadge";
+import { TournamentLiveSync } from "@/components/tournament/TournamentLiveSync";
 
 const MATCH_MARKET_TITLES: Record<string, string> = {
   match_winner: "Vítěz zápasu",
@@ -75,6 +76,7 @@ export default async function SazeniPage() {
 
   return (
     <div className="space-y-8">
+      {t && <TournamentLiveSync tournamentId={t.id} />}
       <div>
         <h1 className="text-2xl font-semibold">Sázení</h1>
         <p className="text-sm text-muted-foreground">

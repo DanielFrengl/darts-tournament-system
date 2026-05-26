@@ -8,6 +8,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { UserMenu } from "@/components/layout/UserMenu";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { UserLiveSync } from "@/components/layout/UserLiveSync";
 import { CapitalDisplay } from "@/components/user/CapitalDisplay";
 import { displayName } from "@/lib/names";
 import { getAppSettings } from "@/lib/settings";
@@ -33,6 +34,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-background">
+      <UserLiveSync userId={session.user.id} />
       <Sidebar role={me.role} systemName={settings.name} logoUrl={settings.logoUrl} />
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b bg-card/95 p-3 backdrop-blur supports-backdrop-filter:bg-card/60 sm:p-4">

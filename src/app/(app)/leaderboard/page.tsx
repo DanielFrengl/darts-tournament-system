@@ -21,6 +21,7 @@ import {
   LeaderboardCharts,
   type LeaderboardRow,
 } from "@/components/leaderboard/LeaderboardCharts";
+import { TournamentLiveSync } from "@/components/tournament/TournamentLiveSync";
 
 type FullRow = LeaderboardRow & { avatarUrl: string | null };
 
@@ -62,6 +63,7 @@ export default async function LeaderboardPage() {
 
   return (
     <div className="space-y-6">
+      {active && <TournamentLiveSync tournamentId={active.id} />}
       <h1 className="text-2xl font-semibold">Žebříček</h1>
 
       <Tabs defaultValue={defaultTab}>

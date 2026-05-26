@@ -14,6 +14,7 @@ import type { DB } from "@/db/client";
 import { CapitalService } from "@/lib/capital";
 import { MarketService } from "@/lib/market";
 import type { TournamentConfig } from "@/lib/tournament-config";
+import { publish } from "@/lib/event-bus";
 
 export type PlaceBetResult =
   | { ok: true; bet: Bet }
@@ -108,6 +109,8 @@ export class BettingService {
       return { ok: false, error: err instanceof Error ? err.message : "Failed" };
     }
     if (!createdBet) return { ok: false, error: "Failed" };
+    publish(`user:${userId}`, "capital_changed");
+    publish(`user:${userId}`, "bet_placed", { betId: (createdBet as Bet).id });
     const [sel] = await this.db
       .select()
       .from(marketSelections)
@@ -237,6 +240,10 @@ export class BettingService {
       return { ok: false, error: err instanceof Error ? err.message : "Failed" };
     }
     if (!createdParlay) return { ok: false, error: "Failed" };
+    publish(`user:${userId}`, "capital_changed");
+    publish(`user:${userId}`, "bet_placed", {
+      parlayId: (createdParlay as Parlay).id,
+    });
     // Refresh affected market odds (parimutuel pool changed).
     const sels = await this.db
       .select({ marketId: marketSelections.marketId })
