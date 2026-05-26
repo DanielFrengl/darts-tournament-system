@@ -31,6 +31,22 @@ export const TournamentConfigSchema = z
   })
   .refine((c) => c.advancePerGroup * c.groupCount >= 2, {
     message: "at least 2 players must advance to playoff",
+  })
+  .refine(
+    (c) => {
+      const total = c.advancePerGroup * c.groupCount;
+      return total === 2 || total === 4 || total === 8 || total === 16;
+    },
+    {
+      message:
+        "Celkový počet postupujících musí být 2, 4, 8 nebo 16 (mocnina dvou). " +
+        "Uprav počet skupin × postupujících (např. 2×2=4, 2×4=8).",
+      path: ["advancePerGroup"],
+    }
+  )
+  .refine((c) => c.groupCount === 2 || c.advancePerGroup * c.groupCount === 2, {
+    message: "Aktuálně podporujeme jen 2 skupiny v playoffu",
+    path: ["groupCount"],
   });
 
 export type TournamentConfig = z.infer<typeof TournamentConfigSchema>;

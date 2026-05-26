@@ -8,6 +8,7 @@ import { playerService } from "@/lib/player";
 import { matchService } from "@/lib/match";
 import { TournamentControls } from "@/components/admin/TournamentControls";
 import { TournamentAdminActions } from "@/components/admin/TournamentAdminActions";
+import { AdvancePerGroupFix } from "@/components/admin/AdvancePerGroupFix";
 import { WizardNav } from "@/components/admin/WizardNav";
 
 export default async function AdminTournamentDetail({
@@ -56,6 +57,15 @@ export default async function AdminTournamentDetail({
         currentName={t.name}
         status={t.status}
       />
+
+      {(t.status === "draft" || t.status === "groups") && (
+        <AdvancePerGroupFix
+          tournamentId={id}
+          groupCount={t.configJson.groupCount}
+          currentAdvance={t.configJson.advancePerGroup}
+          groupSize={t.configJson.groupSize}
+        />
+      )}
 
       <Card>
         <CardHeader>

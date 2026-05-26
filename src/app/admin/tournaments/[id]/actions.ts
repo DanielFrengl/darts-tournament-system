@@ -36,6 +36,47 @@ export async function renameTournament(
   }
 }
 
+export async function updateAdvancePerGroup(
+  tournamentId: string,
+  advancePerGroup: number
+): Promise<Result> {
+  if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
+  if (!Number.isInteger(advancePerGroup) || advancePerGroup < 1) {
+    return { ok: false, error: "Nevalidní hodnota" };
+  }
+  const t = await tournamentService.get(tournamentId);
+  if (!t) return { ok: false, error: "Turnaj nenalezen" };
+  if (t.status === "playoff" || t.status === "finished") {
+    return {
+      ok: false,
+      error: "Nelze měnit po vytvoření pavouka",
+    };
+  }
+  const total = advancePerGroup * t.configJson.groupCount;
+  if (total !== 2 && total !== 4 && total !== 8 && total !== 16) {
+    return {
+      ok: false,
+      error: `Celkem ${total} postupujících není mocnina 2 (potřeba 2/4/8/16)`,
+    };
+  }
+  if (advancePerGroup > t.configJson.groupSize) {
+    return {
+      ok: false,
+      error: "Postupujících víc než hráčů ve skupině",
+    };
+  }
+  try {
+    await tournamentService.updateConfig(tournamentId, {
+      ...t.configJson,
+      advancePerGroup,
+    });
+    revalidatePath(`/admin/tournaments/${tournamentId}`);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
 export async function deleteTournament(tournamentId: string): Promise<Result> {
   if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
   const t = await tournamentService.get(tournamentId);

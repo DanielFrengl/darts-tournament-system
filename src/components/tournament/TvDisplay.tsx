@@ -70,9 +70,10 @@ export function TvDisplay({
         href="/tournament"
         title="Zavřít (ESC)"
         aria-label="Zavřít TV display"
-        className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/70 transition-colors hover:border-white/40 hover:bg-white/10 hover:text-white"
+        className="fixed bottom-4 right-4 z-50 flex h-10 items-center gap-2 rounded-full border border-white/15 bg-black/70 px-4 text-xs uppercase tracking-wider text-white/70 shadow-lg backdrop-blur transition-colors hover:border-white/40 hover:bg-black/90 hover:text-white"
       >
         <X className="h-4 w-4" />
+        Zavřít · ESC
       </Link>
       <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/20 pb-4">
         <div className="flex items-center gap-3 sm:gap-4">
@@ -210,39 +211,45 @@ function BigMatchCard({ match }: { match: MatchListItem }) {
 
 function GroupTableTv({ group }: { group: GroupView }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-white/60">
+    <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+      <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-white/70">
         Skupina {group.groupName}
       </p>
-      <table className="w-full text-sm tabular-nums">
+      <table className="w-full table-fixed border-separate border-spacing-y-1 text-base tabular-nums">
         <thead>
-          <tr className="text-[10px] uppercase tracking-wider text-white/40">
-            <th className="text-left font-medium">#</th>
+          <tr className="text-[11px] uppercase tracking-wider text-white/40">
+            <th className="w-8 text-left font-medium">#</th>
             <th className="text-left font-medium">Hráč</th>
-            <th className="text-right font-medium">V</th>
-            <th className="text-right font-medium">P</th>
-            <th className="text-right font-medium">Body</th>
+            <th className="w-10 text-right font-medium">V</th>
+            <th className="w-10 text-right font-medium">P</th>
+            <th className="w-14 text-right font-medium">Body</th>
           </tr>
         </thead>
         <tbody>
           {group.rows.map((r) => (
             <tr
               key={r.playerId}
-              className={r.advancing ? "" : "text-white/50"}
+              className={`rounded ${
+                r.advancing ? "bg-emerald-500/10" : "bg-white/[0.02] text-white/60"
+              }`}
             >
-              <td className="py-1 font-mono">{r.rank}</td>
-              <td className="truncate py-1 font-medium">
-                {r.advancing && (
-                  <span
-                    aria-hidden
-                    className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-emerald-400"
-                  />
-                )}
-                {r.playerName}
+              <td className="rounded-l-md px-2 py-2 font-mono">{r.rank}</td>
+              <td className="truncate px-2 py-2 font-medium">
+                <span className="flex items-center gap-2">
+                  {r.advancing && (
+                    <span
+                      aria-hidden
+                      className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400"
+                    />
+                  )}
+                  <span className="truncate">{r.playerName}</span>
+                </span>
               </td>
-              <td className="py-1 text-right">{r.won}</td>
-              <td className="py-1 text-right">{r.lost}</td>
-              <td className="py-1 text-right font-bold">{r.points}</td>
+              <td className="px-2 py-2 text-right">{r.won}</td>
+              <td className="px-2 py-2 text-right">{r.lost}</td>
+              <td className="rounded-r-md px-2 py-2 text-right font-bold">
+                {r.points}
+              </td>
             </tr>
           ))}
         </tbody>
