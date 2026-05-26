@@ -115,11 +115,17 @@ export function TvDisplay({
               </div>
             </>
           ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-12">
-              <p className="text-2xl text-white/60">Žádný zápas zrovna neběží</p>
+            // Compact inline pill when no live match — doesn't claim the
+            // whole hero so the bracket/groups below can breathe.
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+              <p className="text-sm uppercase tracking-widest text-white/60">
+                Žádný zápas zrovna neběží
+              </p>
               {next[0] && (
-                <p className="text-sm text-white/40">
-                  Další: #{next[0].number} · {next[0].playerA} vs {next[0].playerB}
+                <p className="text-sm text-white/70">
+                  Další: <span className="font-semibold">#{next[0].number}</span>{" "}
+                  · {next[0].playerA}{" "}
+                  <span className="text-white/40">vs</span> {next[0].playerB}
                 </p>
               )}
             </div>
@@ -138,7 +144,7 @@ export function TvDisplay({
             </div>
           )}
           {showBracket && (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-6">
               <h2 className="mb-6 text-xl font-semibold text-white/70">Pavouk</h2>
               <BracketView matches={bracket} variant="tv" />
             </div>
