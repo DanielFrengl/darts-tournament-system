@@ -205,12 +205,12 @@ function OddsButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="group flex cursor-pointer items-center justify-between gap-2 rounded-md border-2 border-amber-500/40 bg-amber-500/5 px-3 py-2.5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-amber-400 hover:bg-amber-500/15 hover:shadow-md active:translate-y-0 disabled:cursor-not-allowed disabled:border-border disabled:bg-muted/40 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:border-border disabled:hover:bg-muted/40 disabled:hover:shadow-sm"
+      className="group flex cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-card-elevated px-3 py-2.5 text-left shadow-[var(--shadow-card)] transition-all hover:-translate-y-0.5 hover:border-foreground/30 hover:bg-accent hover:shadow-[var(--shadow-card-hover)] active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted/40 disabled:opacity-50 disabled:shadow-none disabled:hover:translate-y-0 disabled:hover:border-border disabled:hover:bg-muted/40"
     >
       <span className="truncate text-xs text-muted-foreground group-hover:text-foreground">
         {name}
       </span>
-      <span className="font-mono text-base font-bold tabular-nums text-amber-400 group-hover:text-amber-300">
+      <span className="font-mono text-base font-bold tabular-nums text-foreground">
         {odds.toFixed(2)}
       </span>
     </button>

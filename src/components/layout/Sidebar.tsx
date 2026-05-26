@@ -104,7 +104,7 @@ export function SidebarNav({
 
 export function Sidebar(props: { role: Role; systemName: string; logoUrl: string }) {
   return (
-    <aside className="hidden w-56 shrink-0 border-r md:flex md:flex-col">
+    <aside className="hidden w-56 shrink-0 border-r bg-card md:flex md:flex-col">
       <SidebarNav {...props} />
     </aside>
   );

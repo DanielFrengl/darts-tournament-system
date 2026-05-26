@@ -71,12 +71,12 @@ export function MarketCard({
                       finalOdds: sel.finalOdds,
                     })
                   }
-                  className={`group relative cursor-pointer overflow-hidden rounded-md border-2 border-amber-500/40 bg-amber-500/5 p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-amber-400 hover:bg-amber-500/15 hover:shadow-md active:translate-y-0 disabled:cursor-not-allowed disabled:border-border disabled:bg-muted/40 disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:border-border disabled:hover:bg-muted/40 disabled:hover:shadow-sm ${winningStyle}`}
+                  className={`group relative cursor-pointer overflow-hidden rounded-md border border-border bg-card-elevated p-3 text-left shadow-[var(--shadow-card)] transition-all hover:-translate-y-0.5 hover:border-foreground/30 hover:bg-accent hover:shadow-[var(--shadow-card-hover)] active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted/40 disabled:opacity-60 disabled:shadow-none disabled:hover:translate-y-0 disabled:hover:border-border disabled:hover:bg-muted/40 ${winningStyle}`}
                 >
                   {market.totalPool > 0 && (
                     <span
                       aria-hidden
-                      className="absolute inset-y-0 left-0 bg-amber-500/10"
+                      className="absolute inset-y-0 left-0 bg-foreground/[0.06]"
                       style={{ width: `${sharePct}%` }}
                     />
                   )}
@@ -88,7 +88,7 @@ export function MarketCard({
                           {poolFmt.format(sel.pool)} · {sharePct.toFixed(0)}%
                         </span>
                       )}
-                      <span className="font-mono text-lg font-bold tabular-nums text-amber-400 group-hover:text-amber-300">
+                      <span className="font-mono text-lg font-bold tabular-nums text-foreground">
                         {sel.finalOdds.toFixed(2)}
                       </span>
                     </span>

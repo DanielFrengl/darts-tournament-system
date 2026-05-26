@@ -158,10 +158,10 @@ export function BetBuilder({
                               odds: s.finalOdds,
                             })
                           }
-                          className={`group flex cursor-pointer items-center justify-between gap-2 rounded-md border-2 px-3 py-2 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:shadow-sm ${
+                          className={`group flex cursor-pointer items-center justify-between gap-2 rounded-md border px-3 py-2 text-left shadow-[var(--shadow-card)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:translate-y-0 ${
                             isSelected
-                              ? "border-emerald-400 bg-emerald-500/15"
-                              : "border-amber-500/40 bg-amber-500/5 hover:border-amber-400 hover:bg-amber-500/15"
+                              ? "border-emerald-500/70 bg-emerald-500/10"
+                              : "border-border bg-card-elevated hover:border-foreground/30 hover:bg-accent"
                           }`}
                           title={
                             sameMarketBlocked
@@ -172,9 +172,7 @@ export function BetBuilder({
                           <span className="truncate text-sm">{s.label}</span>
                           <span
                             className={`font-mono text-base font-bold tabular-nums ${
-                              isSelected
-                                ? "text-emerald-400"
-                                : "text-amber-400 group-hover:text-amber-300"
+                              isSelected ? "text-emerald-400" : "text-foreground"
                             }`}
                           >
                             {s.finalOdds.toFixed(2)}
@@ -215,7 +213,7 @@ export function BetBuilder({
                       <p className="truncate font-medium">{s.selectionLabel}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-sm font-semibold text-amber-400">
+                      <span className="font-mono text-sm font-semibold text-foreground">
                         {s.odds.toFixed(2)}
                       </span>
                       <button

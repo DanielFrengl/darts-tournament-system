@@ -258,7 +258,7 @@ export default async function MyBetsPage() {
                     </p>
                     <p>
                       Kurz{" "}
-                      <span className="font-mono font-semibold text-amber-400">
+                      <span className="font-mono font-semibold text-foreground">
                         {p.lockedOdds.toFixed(2)}
                       </span>
                     </p>
@@ -302,7 +302,7 @@ export default async function MyBetsPage() {
                           <p className="font-medium">{leg.selectionLabel}</p>
                         </div>
                         <div className="flex items-center gap-3 text-sm">
-                          <span className="font-mono text-amber-400">
+                          <span className="font-mono text-foreground">
                             {leg.odds.toFixed(2)}
                           </span>
                           <BetStatusBadge status={leg.status} />

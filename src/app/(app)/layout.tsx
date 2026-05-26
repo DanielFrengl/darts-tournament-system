@@ -32,10 +32,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const settings = await getAppSettings();
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-background">
       <Sidebar role={me.role} systemName={settings.name} logoUrl={settings.logoUrl} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between gap-3 border-b p-3 sm:p-4">
+        <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b bg-card/95 p-3 backdrop-blur supports-backdrop-filter:bg-card/60 sm:p-4">
           <div className="flex items-center gap-2 md:hidden">
             <MobileNav
               role={me.role}
