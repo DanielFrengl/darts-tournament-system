@@ -158,6 +158,25 @@ export default async function MatchDetailPage({
         </Card>
       ) : (
         <div className="space-y-8">
+          {match.status === "live" && live.length > 0 && (
+            <Section
+              title="Live: jednotlivé legy"
+              subtitle="Sázej na vítěze každého rozjetého legu"
+            >
+              <div className="grid gap-4 md:grid-cols-2">
+                {live.map((vm) => (
+                  <MarketCard
+                    key={vm.id}
+                    market={vm}
+                    matchId={id}
+                    capital={Number(me?.capital ?? 0)}
+                    maxStakePct={cfg.maxStakePct}
+                    canBet={match.status !== "cancelled"}
+                  />
+                ))}
+              </div>
+            </Section>
+          )}
           {primary.length > 0 && (
             <Section title="Hlavní trh" subtitle="Kdo vyhraje zápas">
               <div className="grid gap-4 md:grid-cols-2">
@@ -190,7 +209,7 @@ export default async function MatchDetailPage({
               </div>
             </Section>
           )}
-          {live.length > 0 && (
+          {match.status !== "live" && live.length > 0 && (
             <Section
               title="Live: jednotlivé legy"
               subtitle="Sázej na vítěze každého rozjetého legu"

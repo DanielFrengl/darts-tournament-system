@@ -7,6 +7,7 @@ import { users } from "@/db/schema";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { UserMenu } from "@/components/layout/UserMenu";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { CapitalDisplay } from "@/components/user/CapitalDisplay";
 import { displayName } from "@/lib/names";
 import { getAppSettings } from "@/lib/settings";
@@ -49,8 +50,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             />
             <span className="truncate text-sm font-semibold">{settings.name}</span>
           </div>
-          <div className="ml-auto flex items-center gap-3 sm:gap-4">
+          <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <CapitalDisplay capital={me.capital} />
+            <ThemeToggle />
             <UserMenu
               username={me.username}
               displayName={displayName(me)}

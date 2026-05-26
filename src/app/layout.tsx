@@ -48,7 +48,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       suppressHydrationWarning
     >
       <body className="font-sans antialiased">
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <SessionProvider session={session}>{children}</SessionProvider>
           <Toaster richColors position="top-right" />
         </ThemeProvider>

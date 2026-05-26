@@ -12,6 +12,7 @@ import {
   users,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { marketService } from "@/lib/market";
 import { tournamentService } from "@/lib/tournament";
 import {
   buildGroupViews,
@@ -46,6 +47,12 @@ export default async function TournamentOverviewPage() {
         </CardContent>
       </Card>
     );
+  }
+
+  // Idempotent: ensures 2nd/3rd place markets exist for tournaments
+  // that were started before those market types were introduced.
+  if (t.status !== "finished") {
+    await marketService.createTournamentPlaces(t.id);
   }
 
   const groupViews = await buildGroupViews(t.id, t.configJson);
@@ -122,19 +129,6 @@ export default async function TournamentOverviewPage() {
         </section>
       )}
 
-      {groupViews.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Tabulky skupin</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {groupViews.map((g) => (
-              <GroupTable key={g.groupId} groupName={g.groupName} rows={g.rows} />
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
       {showBracket && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
@@ -188,6 +182,19 @@ export default async function TournamentOverviewPage() {
             ))}
           </div>
         </section>
+      )}
+
+      {groupViews.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Tabulky skupin</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {groupViews.map((g) => (
+              <GroupTable key={g.groupId} groupName={g.groupName} rows={g.rows} />
+            ))}
+          </CardContent>
+        </Card>
       )}
     </div>
   );

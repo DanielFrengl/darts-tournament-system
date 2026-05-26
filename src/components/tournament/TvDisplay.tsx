@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { X } from "lucide-react";
 import { useLive } from "@/lib/use-live";
 import { useRouter } from "next/navigation";
 import { DARTS_FACTS } from "@/lib/darts-facts";
@@ -34,6 +36,15 @@ export function TvDisplay({
     return () => clearInterval(i);
   }, [router]);
 
+  // ESC exits the TV view back to /tournament.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") router.push("/tournament");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [router]);
+
   const elapsed = useElapsed(startedAt);
   const [initialFactIndex] = useState(() => Math.floor(Date.now() / 12_000));
   const factIndex = useRotatingIndex(initialFactIndex, DARTS_FACTS.length, 12_000);
@@ -44,7 +55,15 @@ export function TvDisplay({
   const hasBracket = bracket.length > 0;
 
   return (
-    <div className="flex min-h-screen flex-col bg-black p-4 text-white sm:p-6 lg:p-8">
+    <div className="relative flex min-h-screen flex-col bg-black p-4 text-white sm:p-6 lg:p-8">
+      <Link
+        href="/tournament"
+        title="Zavřít (ESC)"
+        aria-label="Zavřít TV display"
+        className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/70 transition-colors hover:border-white/40 hover:bg-white/10 hover:text-white"
+      >
+        <X className="h-4 w-4" />
+      </Link>
       <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/20 pb-4">
         <div className="flex items-center gap-3 sm:gap-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
