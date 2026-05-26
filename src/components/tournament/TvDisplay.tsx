@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { DARTS_FACTS } from "@/lib/darts-facts";
 import type { MatchListItem } from "@/components/tournament/MatchListCard";
 import { BracketView, type BracketMatchVM } from "@/components/tournament/BracketView";
+import type { GroupView } from "@/lib/tournament-views";
 import { LiveDot } from "@/components/ui/live-dot";
 
 const poolFmt = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
@@ -15,19 +16,23 @@ const poolFmt = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
 export function TvDisplay({
   tournamentId,
   tournamentName,
+  tournamentStatus,
   systemName,
   logoUrl,
   startedAt,
   matches,
   bracket,
+  groupViews,
 }: {
   tournamentId: string;
   tournamentName: string;
+  tournamentStatus: "draft" | "groups" | "playoff" | "finished";
   systemName: string;
   logoUrl: string;
   startedAt: string | null;
   matches: MatchListItem[];
   bracket: BracketMatchVM[];
+  groupViews: GroupView[];
 }) {
   const router = useRouter();
   useLive([`tournament:${tournamentId}`], () => router.refresh());
@@ -53,6 +58,11 @@ export function TvDisplay({
   const live = matches.filter((m) => m.status === "live");
   const next = matches.filter((m) => m.status === "scheduled").slice(0, 4);
   const hasBracket = bracket.length > 0;
+  // Show standings only while groups are running; bracket once playoff
+  // starts (and stays for finished tournaments).
+  const showGroups = tournamentStatus === "groups" && groupViews.length > 0;
+  const showBracket =
+    (tournamentStatus === "playoff" || tournamentStatus === "finished") && hasBracket;
 
   return (
     <div className="relative flex min-h-screen flex-col bg-black p-4 text-white sm:p-6 lg:p-8">
@@ -114,7 +124,19 @@ export function TvDisplay({
             </div>
           )}
 
-          {hasBracket && (
+          {showGroups && (
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-6">
+              <h2 className="mb-4 text-xl font-semibold text-white/70">
+                Tabulky skupin
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {groupViews.map((g) => (
+                  <GroupTableTv key={g.groupId} group={g} />
+                ))}
+              </div>
+            </div>
+          )}
+          {showBracket && (
             <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
               <h2 className="mb-6 text-xl font-semibold text-white/70">Pavouk</h2>
               <BracketView matches={bracket} variant="tv" />
@@ -182,6 +204,49 @@ function BigMatchCard({ match }: { match: MatchListItem }) {
           <OddsPill name={match.playerB} odds={match.oddsB} />
         </div>
       )}
+    </div>
+  );
+}
+
+function GroupTableTv({ group }: { group: GroupView }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-white/60">
+        Skupina {group.groupName}
+      </p>
+      <table className="w-full text-sm tabular-nums">
+        <thead>
+          <tr className="text-[10px] uppercase tracking-wider text-white/40">
+            <th className="text-left font-medium">#</th>
+            <th className="text-left font-medium">Hráč</th>
+            <th className="text-right font-medium">V</th>
+            <th className="text-right font-medium">P</th>
+            <th className="text-right font-medium">Body</th>
+          </tr>
+        </thead>
+        <tbody>
+          {group.rows.map((r) => (
+            <tr
+              key={r.playerId}
+              className={r.advancing ? "" : "text-white/50"}
+            >
+              <td className="py-1 font-mono">{r.rank}</td>
+              <td className="truncate py-1 font-medium">
+                {r.advancing && (
+                  <span
+                    aria-hidden
+                    className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-emerald-400"
+                  />
+                )}
+                {r.playerName}
+              </td>
+              <td className="py-1 text-right">{r.won}</td>
+              <td className="py-1 text-right">{r.lost}</td>
+              <td className="py-1 text-right font-bold">{r.points}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

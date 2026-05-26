@@ -1,5 +1,9 @@
 import { tournamentService } from "@/lib/tournament";
-import { buildMatchList, buildBracketMatches } from "@/lib/tournament-views";
+import {
+  buildMatchList,
+  buildBracketMatches,
+  buildGroupViews,
+} from "@/lib/tournament-views";
 import { getAppSettings } from "@/lib/settings";
 import { TvDisplay } from "@/components/tournament/TvDisplay";
 
@@ -12,7 +16,11 @@ export default async function DisplayPage() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-black text-white">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={settings.logoUrl} alt={settings.name} className="h-40 w-40 object-contain" />
+        <img
+          src={settings.logoUrl}
+          alt={settings.name}
+          className="h-40 w-40 object-contain"
+        />
         <p className="text-3xl">{settings.name}</p>
         <p className="text-xl text-white/60">Žádný aktivní turnaj.</p>
       </div>
@@ -20,15 +28,18 @@ export default async function DisplayPage() {
   }
   const matches = await buildMatchList(t.id);
   const bracket = await buildBracketMatches(t.id);
+  const groupViews = await buildGroupViews(t.id, t.configJson);
   return (
     <TvDisplay
       tournamentId={t.id}
       tournamentName={t.name}
+      tournamentStatus={t.status}
       systemName={settings.name}
       logoUrl={settings.logoUrl}
       startedAt={t.startedAt ? t.startedAt.toISOString() : null}
       matches={matches}
       bracket={bracket}
+      groupViews={groupViews}
     />
   );
 }

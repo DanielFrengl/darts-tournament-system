@@ -7,14 +7,18 @@ import { Button } from "@/components/ui/button";
 import {
   startGroups,
   finishTournament,
+  createBracket,
 } from "@/app/admin/tournaments/[id]/actions";
 
 export function TournamentControls({
   tournamentId,
   status,
+  needsBracketFallback = false,
 }: {
   tournamentId: string;
   status: "draft" | "groups" | "playoff" | "finished";
+  /** True when status=groups, all group matches finished, no playoff matches yet. */
+  needsBracketFallback?: boolean;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -45,6 +49,18 @@ export function TournamentControls({
     });
   }
 
+  function onCreateBracket() {
+    start(async () => {
+      const r = await createBracket(tournamentId);
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      toast.success("Pavouk vytvořen");
+      router.push(`/admin/tournaments/${tournamentId}/play`);
+    });
+  }
+
   return (
     <div className="flex flex-wrap gap-2">
       {status === "draft" && (
@@ -52,7 +68,7 @@ export function TournamentControls({
           Spustit skupiny
         </Button>
       )}
-      {status === "groups" && (
+      {status === "groups" && !needsBracketFallback && (
         <Button
           variant="default"
           render={
@@ -61,6 +77,11 @@ export function TournamentControls({
             </a>
           }
         />
+      )}
+      {status === "groups" && needsBracketFallback && (
+        <Button disabled={pending} onClick={onCreateBracket}>
+          Vytvořit pavouka a pokračovat →
+        </Button>
       )}
       {status === "playoff" && (
         <>

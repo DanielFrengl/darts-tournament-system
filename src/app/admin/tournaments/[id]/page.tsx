@@ -25,6 +25,11 @@ export default async function AdminTournamentDetail({
   const groupMatches = allMatches.filter((m) => m.phase === "group");
   const playoffMatches = allMatches.filter((m) => m.phase !== "group");
   const finishedGroup = groupMatches.filter((m) => m.status === "finished").length;
+  const groupsDone =
+    groupMatches.length > 0 &&
+    groupMatches.every((m) => m.status === "finished" || m.status === "cancelled");
+  const needsBracketFallback =
+    t.status === "groups" && groupsDone && playoffMatches.length === 0;
 
   return (
     <div className="space-y-4">
@@ -61,7 +66,11 @@ export default async function AdminTournamentDetail({
           <div>Hráči: {players.length} / {t.configJson.groupCount * t.configJson.groupSize}</div>
           <div>Skupinové zápasy: {finishedGroup} / {groupMatches.length} dokončeno</div>
           <div>Playoff zápasy: {playoffMatches.length}</div>
-          <TournamentControls tournamentId={id} status={t.status} />
+          <TournamentControls
+            tournamentId={id}
+            status={t.status}
+            needsBracketFallback={needsBracketFallback}
+          />
         </CardContent>
       </Card>
 
