@@ -106,7 +106,10 @@ export function MatchListCard({
               <OddsButton
                 name={match.playerA}
                 odds={match.oddsA!}
+                pool={match.poolA}
+                sidePool={match.poolA + match.poolB}
                 disabled={!canBet}
+                accent="A"
                 onClick={() =>
                   setTarget({
                     selectionId: match.selectionIdA!,
@@ -119,7 +122,10 @@ export function MatchListCard({
               <OddsButton
                 name={match.playerB}
                 odds={match.oddsB!}
+                pool={match.poolB}
+                sidePool={match.poolA + match.poolB}
                 disabled={!canBet}
+                accent="B"
                 onClick={() =>
                   setTarget({
                     selectionId: match.selectionIdB!,
@@ -194,26 +200,52 @@ function formatPool(pool: number): string {
 function OddsButton({
   name,
   odds,
+  pool,
+  sidePool,
+  accent,
   onClick,
   disabled,
 }: {
   name: string;
   odds: number;
+  pool: number;
+  /** poolA + poolB combined, so each button shows its share of the two-way market. */
+  sidePool: number;
+  accent: "A" | "B";
   onClick: () => void;
   disabled: boolean;
 }) {
+  const sharePct = sidePool > 0 ? (pool / sidePool) * 100 : 0;
+  const fillClass =
+    accent === "A" ? "bg-sky-400/15" : "bg-amber-400/15";
   return (
     <button
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="group flex cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-card-elevated px-3 py-2.5 text-left shadow-[var(--shadow-card)] transition-all hover:-translate-y-0.5 hover:border-foreground/30 hover:bg-accent hover:shadow-[var(--shadow-card-hover)] active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted/40 disabled:opacity-50 disabled:shadow-none disabled:hover:translate-y-0 disabled:hover:border-border disabled:hover:bg-muted/40"
+      className="group relative cursor-pointer overflow-hidden rounded-md border border-border bg-card-elevated px-3 py-2.5 text-left shadow-[var(--shadow-card)] transition-all hover:-translate-y-0.5 hover:border-foreground/30 hover:bg-accent hover:shadow-[var(--shadow-card-hover)] active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted/40 disabled:opacity-50 disabled:shadow-none disabled:hover:translate-y-0 disabled:hover:border-border disabled:hover:bg-muted/40"
     >
-      <span className="truncate text-xs text-muted-foreground group-hover:text-foreground">
-        {name}
-      </span>
-      <span className="font-mono text-base font-bold tabular-nums text-foreground">
-        {odds.toFixed(2)}
+      {sidePool > 0 && (
+        <span
+          aria-hidden
+          className={`absolute inset-y-0 left-0 ${fillClass}`}
+          style={{ width: `${sharePct}%` }}
+        />
+      )}
+      <span className="relative flex items-center justify-between gap-2">
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-xs text-muted-foreground group-hover:text-foreground">
+            {name}
+          </span>
+          {sidePool > 0 && (
+            <span className="block text-[10px] uppercase tracking-wider text-muted-foreground">
+              {sharePct.toFixed(0)}%
+            </span>
+          )}
+        </span>
+        <span className="font-mono text-base font-bold tabular-nums text-foreground">
+          {odds.toFixed(2)}
+        </span>
       </span>
     </button>
   );
