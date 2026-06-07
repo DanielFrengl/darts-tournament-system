@@ -283,19 +283,19 @@ function PoolSplitBar({
       </div>
       <div className="flex h-2 overflow-hidden rounded-full bg-white/10">
         <div
-          className="bg-sky-400 transition-all"
+          className="bg-white/75 transition-all"
           style={{ width: `${pctA}%` }}
           aria-hidden
         />
         {rest > 0 && (
           <div
-            className="bg-white/25 transition-all"
+            className="bg-white/30 transition-all"
             style={{ width: `${pctRest}%` }}
             aria-hidden
           />
         )}
         <div
-          className="bg-amber-400 transition-all"
+          className="bg-white/45 transition-all"
           style={{ width: `${pctB}%` }}
           aria-hidden
         />

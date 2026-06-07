@@ -109,7 +109,6 @@ export function MatchListCard({
                 pool={match.poolA}
                 sidePool={match.poolA + match.poolB}
                 disabled={!canBet}
-                accent="A"
                 onClick={() =>
                   setTarget({
                     selectionId: match.selectionIdA!,
@@ -125,7 +124,6 @@ export function MatchListCard({
                 pool={match.poolB}
                 sidePool={match.poolA + match.poolB}
                 disabled={!canBet}
-                accent="B"
                 onClick={() =>
                   setTarget({
                     selectionId: match.selectionIdB!,
@@ -202,7 +200,6 @@ function OddsButton({
   odds,
   pool,
   sidePool,
-  accent,
   onClick,
   disabled,
 }: {
@@ -211,13 +208,10 @@ function OddsButton({
   pool: number;
   /** poolA + poolB combined, so each button shows its share of the two-way market. */
   sidePool: number;
-  accent: "A" | "B";
   onClick: () => void;
   disabled: boolean;
 }) {
   const sharePct = sidePool > 0 ? (pool / sidePool) * 100 : 0;
-  const fillClass =
-    accent === "A" ? "bg-sky-400/15" : "bg-amber-400/15";
   return (
     <button
       type="button"
@@ -228,7 +222,7 @@ function OddsButton({
       {sidePool > 0 && (
         <span
           aria-hidden
-          className={`absolute inset-y-0 left-0 ${fillClass}`}
+          className="absolute inset-y-0 left-0 bg-foreground/[0.06]"
           style={{ width: `${sharePct}%` }}
         />
       )}
