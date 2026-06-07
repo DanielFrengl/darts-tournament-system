@@ -22,6 +22,7 @@ import {
   type LeaderboardRow,
 } from "@/components/leaderboard/LeaderboardCharts";
 import { TournamentLiveSync } from "@/components/tournament/TournamentLiveSync";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 type FullRow = LeaderboardRow & { avatarUrl: string | null };
 
@@ -64,7 +65,10 @@ export default async function LeaderboardPage() {
   return (
     <div className="space-y-6">
       {active && <TournamentLiveSync tournamentId={active.id} />}
-      <h1 className="text-2xl font-semibold">Žebříček</h1>
+      <PageHeader
+        title="Žebříček"
+        description="Pořadí podle čistého zisku. Přepínej mezi aktuálním turnajem a celkovými statistikami."
+      />
 
       <Tabs defaultValue={defaultTab}>
         <TabsList>

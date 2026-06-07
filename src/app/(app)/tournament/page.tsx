@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { and, eq, inArray, sum } from "drizzle-orm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { db } from "@/db/client";
 import {
   bets,
@@ -71,12 +72,9 @@ export default async function TournamentOverviewPage() {
   return (
     <div className="space-y-6">
       <TournamentLiveSync tournamentId={t.id} />
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-semibold">{t.name}</h1>
-        <Badge variant="outline" className="text-base">
-          {statusLabel(t.status)}
-        </Badge>
-      </div>
+      <PageHeader title={t.name}>
+        <StatusBadge kind="tournament" status={t.status} />
+      </PageHeader>
 
       {capital <= 0 && t.status !== "finished" && (
         <Card className="border-yellow-500/40 bg-yellow-500/5">
@@ -266,15 +264,3 @@ async function loadTournamentFutures(tournamentId: string): Promise<MarketCardVM
   });
 }
 
-function statusLabel(s: "draft" | "groups" | "playoff" | "finished"): string {
-  switch (s) {
-    case "draft":
-      return "Příprava";
-    case "groups":
-      return "Skupiny";
-    case "playoff":
-      return "Playoff";
-    case "finished":
-      return "Dohráno";
-  }
-}

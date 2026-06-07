@@ -21,6 +21,7 @@ import {
   SazeniSurface,
   type SingleGroupVM,
 } from "@/components/betting/SazeniSurface";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { type MarketCardVM } from "@/components/betting/MarketCard";
 import { TournamentLiveSync } from "@/components/tournament/TournamentLiveSync";
 
@@ -60,13 +61,10 @@ export default async function SazeniPage() {
   return (
     <div className="space-y-6">
       {t && <TournamentLiveSync tournamentId={t.id} />}
-      <div>
-        <h1 className="text-2xl font-semibold">Sázení</h1>
-        <p className="text-sm text-muted-foreground">
-          Sázej jednoduše nebo poskládej akumulátor. Své sázky najdeš v záložce
-          Moje sázky.
-        </p>
-      </div>
+      <PageHeader
+        title="Sázení"
+        description="Sázej jednoduše, nebo poskládej akumulátor. Své sázky najdeš v záložce Moje sázky."
+      />
 
       {!t ? (
         <Card>

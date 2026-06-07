@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 import {
   Home,
   Trophy,
@@ -116,13 +120,26 @@ function SidebarLink({
   label,
   onNavigate,
 }: NavItem & { onNavigate?: () => void }) {
+  const pathname = usePathname();
+  const active =
+    href === "/" || href === "/admin"
+      ? pathname === href
+      : pathname === href || pathname.startsWith(`${href}/`);
   return (
     <Link
       href={href}
       onClick={onNavigate}
-      className="flex items-center gap-2 rounded px-2 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors",
+        active
+          ? "bg-accent font-medium text-accent-foreground"
+          : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+      )}
     >
-      {icon}
+      <span className={cn("shrink-0", active ? "text-foreground" : "text-muted-foreground")}>
+        {icon}
+      </span>
       {label}
     </Link>
   );

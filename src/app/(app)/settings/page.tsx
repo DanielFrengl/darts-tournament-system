@@ -5,6 +5,7 @@ import { db } from "@/db/client";
 import { users } from "@/db/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AvatarUpload } from "@/components/user/AvatarUpload";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { BioForm, PasswordForm } from "./forms";
 
 export default async function SettingsPage() {
@@ -18,7 +19,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <h1 className="text-2xl font-semibold">Nastavení</h1>
+      <PageHeader title="Nastavení" description="Uprav si profil, bio a heslo." />
       <Card>
         <CardHeader>
           <CardTitle>Profilovka</CardTitle>

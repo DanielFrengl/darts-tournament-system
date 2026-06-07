@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { BetDialog, type BetTarget } from "./BetDialog";
 
 export type SelectionVM = {
@@ -42,9 +42,7 @@ export function MarketCard({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">{market.title}</CardTitle>
-          <Badge variant={market.status === "open" ? "default" : "secondary"}>
-            {market.status}
-          </Badge>
+          <StatusBadge kind="market" status={market.status} />
         </CardHeader>
         <CardContent>
           <div className="grid gap-2">

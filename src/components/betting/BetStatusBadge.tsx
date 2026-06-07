@@ -3,10 +3,10 @@ import { Badge } from "@/components/ui/badge";
 export type BetStatus = "open" | "won" | "lost" | "refunded";
 
 const LABEL: Record<BetStatus, string> = {
-  open: "Open",
-  won: "Won",
-  lost: "Lost",
-  refunded: "Refunded",
+  open: "Otevřená",
+  won: "Vyhráno",
+  lost: "Prohráno",
+  refunded: "Vráceno",
 };
 
 export function BetStatusBadge({ status }: { status: BetStatus }) {

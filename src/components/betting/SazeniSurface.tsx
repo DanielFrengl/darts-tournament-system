@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Layers, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { BetBuilder, type BuilderGroupVM } from "./BetBuilder";
 import { MarketCard, type MarketCardVM } from "./MarketCard";
 
@@ -98,32 +98,30 @@ function SingleBetView({
     );
   }
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
       {groups.map((g) => (
-        <Card key={g.key}>
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-base">{g.label}</CardTitle>
+        <section key={g.key} className="space-y-3">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b pb-2">
+            <h2 className="text-base font-semibold">{g.label}</h2>
             {g.sublabel && (
-              <p className="text-xs uppercase tracking-wider text-muted-foreground">
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 {g.sublabel}
-              </p>
+              </span>
             )}
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 md:grid-cols-2">
-              {g.markets.map((m) => (
-                <MarketCard
-                  key={m.id}
-                  market={m}
-                  matchId={g.matchId ?? ""}
-                  capital={capital}
-                  maxStakePct={maxStakePct}
-                  canBet
-                />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            {g.markets.map((m) => (
+              <MarketCard
+                key={m.id}
+                market={m}
+                matchId={g.matchId ?? ""}
+                capital={capital}
+                maxStakePct={maxStakePct}
+                canBet
+              />
+            ))}
+          </div>
+        </section>
       ))}
     </div>
   );

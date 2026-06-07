@@ -16,6 +16,7 @@ import { tournamentService } from "@/lib/tournament";
 import { BetsByMatch, type MatchGroupVM, type BetEntry } from "@/components/betting/BetsByMatch";
 import { BetStatusBadge } from "@/components/betting/BetStatusBadge";
 import { TournamentLiveSync } from "@/components/tournament/TournamentLiveSync";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 const PHASE_LABEL: Record<string, string> = {
   group: "Skupina",
@@ -44,12 +45,10 @@ export default async function MojeSazkyPage() {
   return (
     <div className="space-y-6">
       {t && <TournamentLiveSync tournamentId={t.id} />}
-      <div>
-        <h1 className="text-2xl font-semibold">Moje sázky</h1>
-        <p className="text-sm text-muted-foreground">
-          Akumulátory nahoře, jednotlivé sázky pod nimi.
-        </p>
-      </div>
+      <PageHeader
+        title="Moje sázky"
+        description="Akumulátory nahoře, jednotlivé sázky pod nimi."
+      />
 
       {data.parlayCards.length === 0 && data.groupList.length === 0 ? (
         <Card>

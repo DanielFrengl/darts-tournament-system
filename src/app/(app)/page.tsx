@@ -3,8 +3,9 @@ import { redirect } from "next/navigation";
 import { and, count, desc, eq, sum } from "drizzle-orm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { db } from "@/db/client";
 import { bets, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
@@ -80,8 +81,8 @@ export default async function DashboardPage() {
 
   if (!t) {
     return (
-      <div className="space-y-4">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
+      <div className="space-y-6">
+        <PageHeader title="Dashboard" />
         {stats}
         <Card>
           <CardHeader>
@@ -106,10 +107,9 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <TournamentLiveSync tournamentId={t.id} />
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">{t.name}</h1>
-        <Badge variant="outline">{t.status}</Badge>
-      </div>
+      <PageHeader title={t.name}>
+        <StatusBadge kind="tournament" status={t.status} />
+      </PageHeader>
       {stats}
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <Card className="lg:order-1">

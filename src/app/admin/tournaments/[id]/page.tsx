@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { tournamentService } from "@/lib/tournament";
@@ -37,10 +38,9 @@ export default async function AdminTournamentDetail({
       <WizardNav
         back={{ href: "/admin/tournaments", label: "Zpět na turnaje" }}
       />
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-semibold">{t.name}</h1>
-        <Badge variant="outline">{t.status}</Badge>
-      </div>
+      <PageHeader title={t.name}>
+        <StatusBadge kind="tournament" status={t.status} />
+      </PageHeader>
 
       <div className="flex flex-wrap gap-2">
         {t.status !== "draft" && t.status !== "finished" && (

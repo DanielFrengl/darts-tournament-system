@@ -4,6 +4,7 @@ import { users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { displayName } from "@/lib/names";
 import { UserList } from "@/components/admin/UserList";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 export default async function AdminUsersPage() {
   const session = await auth();
@@ -30,8 +31,8 @@ export default async function AdminUsersPage() {
   }));
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Uživatelé</h1>
+    <div className="space-y-6">
+      <PageHeader title="Uživatelé" description="Správa hráčů, rolí a kapitálu." />
       <UserList users={withDisplay} currentUserId={session!.user.id} />
     </div>
   );

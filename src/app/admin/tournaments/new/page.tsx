@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { createTournamentAndRedirect } from "./actions";
 
 export default function NewTournamentPage() {
@@ -20,12 +21,10 @@ export default function NewTournamentPage() {
           }
         />
       </div>
-      <div>
-        <h1 className="text-2xl font-semibold">Nový turnaj</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Krok 1 z 3 — Konfigurace · 2. Hráči · 3. Spustit
-        </p>
-      </div>
+      <PageHeader
+        title="Nový turnaj"
+        description="Krok 1 ze 3: Konfigurace · 2. Hráči · 3. Spustit"
+      />
       <Card>
         <CardHeader>
           <CardTitle>Konfigurace</CardTitle>

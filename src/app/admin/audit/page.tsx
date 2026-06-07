@@ -4,6 +4,7 @@ import { db } from "@/db/client";
 import { transactions, users } from "@/db/schema";
 import { displayName } from "@/lib/names";
 import { AuditLogTable, type AuditRow } from "@/components/admin/AuditLogTable";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 export default async function AuditLogPage() {
   const adminUsers = alias(users, "admin_users");
@@ -50,9 +51,8 @@ export default async function AuditLogPage() {
   }));
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Audit log</h1>
-      <p className="text-sm text-muted-foreground">Posledních 200 transakcí.</p>
+    <div className="space-y-6">
+      <PageHeader title="Audit log" description="Posledních 200 transakcí." />
       <AuditLogTable rows={mapped} />
     </div>
   );

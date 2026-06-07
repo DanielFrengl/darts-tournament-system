@@ -2,7 +2,8 @@ import Link from "next/link";
 import { and, count, eq, gte, sum } from "drizzle-orm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { db } from "@/db/client";
 import { users, tournaments, matches, markets, bets, players } from "@/db/schema";
 import { tournamentService } from "@/lib/tournament";
@@ -88,7 +89,7 @@ export default async function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Admin přehled</h1>
+      <PageHeader title="Admin přehled" />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Uživatelé" value={String(userCount)} />
@@ -106,7 +107,7 @@ export default async function AdminDashboard() {
           <CardHeader className="flex flex-row items-center justify-between">
             <div className="space-y-1">
               <CardTitle>{activeStats.name}</CardTitle>
-              <Badge variant="outline">{activeStats.status}</Badge>
+              <StatusBadge kind="tournament" status={activeStats.status} />
             </div>
             <Button
               variant="outline"

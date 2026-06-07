@@ -8,6 +8,7 @@ import { tournamentService } from "@/lib/tournament";
 import { playerService } from "@/lib/player";
 import { PlayerManager } from "@/components/admin/PlayerManager";
 import { WizardNav } from "@/components/admin/WizardNav";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { displayName } from "@/lib/names";
 import { ensureGroupsForTournament } from "./actions";
 
@@ -69,12 +70,16 @@ export default async function PlayersPage({
         back={{ href: "/admin/tournaments", label: "Zpět na turnaje" }}
         next={{ href: `/admin/tournaments/${id}`, label: "Pokračovat na přehled" }}
       />
-      <div>
-        <h1 className="text-2xl font-semibold">{t.name} — Hráči</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Krok 2 z 3 — 1. Konfigurace · <span className="font-semibold text-foreground">Hráči</span> · 3. Spustit
-        </p>
-      </div>
+      <PageHeader
+        title={`${t.name} — Hráči`}
+        description={
+          <>
+            Krok 2 ze 3: 1. Konfigurace ·{" "}
+            <span className="font-semibold text-foreground">Hráči</span> · 3.
+            Spustit
+          </>
+        }
+      />
       <Card>
         <CardHeader>
           <CardTitle>Skupiny</CardTitle>

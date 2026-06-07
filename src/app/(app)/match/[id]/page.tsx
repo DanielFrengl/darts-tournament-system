@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { asc, eq, inArray, and, sum } from "drizzle-orm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { db } from "@/db/client";
 import {
   bets,
@@ -137,7 +138,7 @@ export default async function MatchDetailPage({
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Badge variant="outline">{phaseLabel}</Badge>
-          <Badge variant={match.status === "live" ? "default" : "secondary"}>{match.status}</Badge>
+          <StatusBadge kind="match" status={match.status} />
           <span className="text-sm text-muted-foreground">best of {match.bestOf}</span>
         </div>
         <h1 className="text-2xl font-semibold">

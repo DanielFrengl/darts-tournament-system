@@ -7,7 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { BetStatusBadge } from "@/components/betting/BetStatusBadge";
 
 export type BetRowVM = {
   id: string;
@@ -63,7 +63,7 @@ export function MyBetsTable({ rows }: { rows: BetRowVM[] }) {
             <TableCell className="text-right font-mono">{fmt.format(Number(b.stake))}</TableCell>
             <TableCell className="text-right font-mono">{Number(b.lockedOdds).toFixed(2)}</TableCell>
             <TableCell>
-              <Badge variant={statusVariant(b.status)}>{b.status}</Badge>
+              <BetStatusBadge status={b.status} />
             </TableCell>
             <TableCell className="text-right font-mono">
               {b.payout != null ? fmt.format(Number(b.payout)) : "—"}
@@ -80,17 +80,4 @@ export function MyBetsTable({ rows }: { rows: BetRowVM[] }) {
       </TableBody>
     </Table>
   );
-}
-
-function statusVariant(s: BetRowVM["status"]): "default" | "secondary" | "outline" | "destructive" {
-  switch (s) {
-    case "open":
-      return "secondary";
-    case "won":
-      return "default";
-    case "lost":
-      return "destructive";
-    case "refunded":
-      return "outline";
-  }
 }
