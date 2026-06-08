@@ -34,7 +34,7 @@ export function ProfileStats({
           <Stat
             label="Čistý zisk"
             value={`${stats.netProfit > 0 ? "+" : ""}${fmt.format(stats.netProfit)}`}
-            suffix="Chips"
+            suffix="jablka"
             tone={
               stats.netProfit > 0
                 ? "positive"
@@ -62,8 +62,8 @@ export function ProfileStats({
             sub={`${stats.won} V · ${stats.lost} P`}
           />
           <Stat label="Sázek" value={String(stats.betCount)} sub={`${stats.open} otevř.`} />
-          <Stat label="Obrat" value={fmt.format(stats.totalStaked)} suffix="Chips" />
-          <Stat label="Návrat" value={fmt.format(stats.totalReturn)} suffix="Chips" />
+          <Stat label="Obrat" value={fmt.format(stats.totalStaked)} suffix="jablka" />
+          <Stat label="Návrat" value={fmt.format(stats.totalReturn)} suffix="jablka" />
           <Stat label="Výhry" value={String(stats.won)} tone="positive" />
           <Stat label="Prohry" value={String(stats.lost)} tone="negative" />
         </div>

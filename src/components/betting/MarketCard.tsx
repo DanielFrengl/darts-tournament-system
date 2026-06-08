@@ -99,7 +99,7 @@ export function MarketCard({
             <p className="mt-3 text-xs text-muted-foreground">
               Pool celkem:{" "}
               <span className="font-mono text-foreground">
-                {poolFmt.format(market.totalPool)}
+                {poolFmt.format(market.totalPool)} jablka
               </span>
             </p>
           )}

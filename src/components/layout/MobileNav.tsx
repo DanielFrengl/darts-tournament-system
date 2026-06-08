@@ -5,13 +5,14 @@ import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { SidebarNav } from "./Sidebar";
+import type { Role } from "@/lib/roles";
 
 export function MobileNav({
   role,
   systemName,
   logoUrl,
 }: {
-  role: "user" | "admin";
+  role: Role;
   systemName: string;
   logoUrl: string;
 }) {

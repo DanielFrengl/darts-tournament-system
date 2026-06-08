@@ -214,7 +214,7 @@ function LeaderboardTable({ rows }: { rows: FullRow[] }) {
               </TableCell>
               <TableCell className="text-right font-mono">
                 {fmt.format(r.capital)}
-                <span className="ml-1 text-xs text-muted-foreground">Chips</span>
+                <span className="ml-1 text-xs text-muted-foreground">jablka</span>
               </TableCell>
             </TableRow>
           ))}

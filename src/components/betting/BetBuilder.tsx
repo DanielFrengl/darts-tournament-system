@@ -257,7 +257,7 @@ export function BetBuilder({
                 placeholder={`max ${fmt.format(maxStake)}`}
               />
               <p className="text-xs text-muted-foreground">
-                Kapitál: {fmt.format(capital)} Chips · max sázka{" "}
+                Kapitál: {fmt.format(capital)} jablka · max sázka{" "}
                 {fmt.format(maxStake)} ({(maxStakePct * 100).toFixed(0)}%)
               </p>
             </div>

@@ -258,5 +258,5 @@ function formatTick(v: number, format: Metric["format"]): string {
 function formatValue(v: number, format: Metric["format"]): string {
   if (format === "percent") return `${v.toFixed(1)} %`;
   if (format === "count") return v.toString();
-  return `${fmt.format(v)} Chips`;
+  return `${fmt.format(v)} jablka`;
 }

@@ -138,7 +138,9 @@ export function MatchListCard({
               <span>
                 Vsazeno celkem:{" "}
                 <span className="font-mono text-foreground">
-                  {formatPool(match.totalPool)}
+                  {match.totalPool > 0
+                    ? `${formatPool(match.totalPool)} jablka`
+                    : "—"}
                 </span>
               </span>
               <Link

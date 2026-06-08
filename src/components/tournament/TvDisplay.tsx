@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { X } from "lucide-react";
+import { X, Trophy } from "lucide-react";
 import { useLive } from "@/lib/use-live";
 import { useRouter } from "next/navigation";
 import { DARTS_FACTS } from "@/lib/darts-facts";
@@ -90,6 +90,10 @@ export function TvDisplay({
   const showBracket =
     (tournamentStatus === "playoff" || tournamentStatus === "finished") && hasBracket;
 
+  // Once the final is decided, the TV switches to a celebratory podium.
+  const podium = derivePodium(bracket);
+  const showPodium = tournamentStatus === "finished" && podium.first != null;
+
   return (
     <div className="relative flex min-h-screen flex-col bg-black p-4 text-white sm:p-6 lg:p-8">
       <Link
@@ -123,14 +127,20 @@ export function TvDisplay({
           </div>
         </div>
         <div className="text-right">
-          <p className="text-xs uppercase tracking-widest text-white/60">Probíhá</p>
+          <p className="text-xs uppercase tracking-widest text-white/60">
+            {showPodium ? "Dokončeno" : "Probíhá"}
+          </p>
           <p className="font-mono text-3xl font-bold tabular-nums sm:text-4xl lg:text-5xl">
             {elapsed}
           </p>
         </div>
       </header>
 
-      <main className="grid flex-1 grid-cols-1 gap-6 py-6 lg:grid-cols-3">
+      <main className="flex flex-1 flex-col py-6">
+       {showPodium ? (
+        <PodiumScreen podium={podium} bracket={bracket} hasBracket={hasBracket} />
+       ) : (
+        <div className="grid flex-1 grid-cols-1 gap-6 lg:grid-cols-3">
         <section className="space-y-4 lg:col-span-2">
           {live.length > 0 ? (
             <>
@@ -191,6 +201,8 @@ export function TvDisplay({
             )}
           </div>
         </section>
+        </div>
+       )}
       </main>
 
       <footer className="rounded-2xl border border-white/10 bg-white/5 p-6">
@@ -201,6 +213,98 @@ export function TvDisplay({
           {fact}
         </p>
       </footer>
+    </div>
+  );
+}
+
+type Podium = { first: string | null; second: string | null; third: string | null };
+
+/**
+ * Derive final standings from the bracket: the final decides 1st (winner)
+ * and 2nd (loser); the third-place match decides 3rd.
+ */
+function derivePodium(bracket: BracketMatchVM[]): Podium {
+  const nameOf = (m: BracketMatchVM, id: string | null) =>
+    id == null ? null : id === m.playerA?.id ? m.playerA?.name ?? null : m.playerB?.name ?? null;
+
+  const final = bracket.find(
+    (m) => m.phase === "final" && m.status === "finished" && m.winnerId != null
+  );
+  const thirdMatch = bracket.find(
+    (m) => m.phase === "third_place" && m.status === "finished" && m.winnerId != null
+  );
+
+  let first: string | null = null;
+  let second: string | null = null;
+  if (final) {
+    first = nameOf(final, final.winnerId);
+    const loserId =
+      final.winnerId === final.playerA?.id ? final.playerB?.id ?? null : final.playerA?.id ?? null;
+    second = nameOf(final, loserId);
+  }
+  const third = thirdMatch ? nameOf(thirdMatch, thirdMatch.winnerId) : null;
+  return { first, second, third };
+}
+
+function PodiumScreen({
+  podium,
+  bracket,
+  hasBracket,
+}: {
+  podium: Podium;
+  bracket: BracketMatchVM[];
+  hasBracket: boolean;
+}) {
+  return (
+    <div className="flex flex-1 flex-col gap-8">
+      <section className="flex flex-col items-center justify-center gap-8 py-4 sm:gap-10 sm:py-8">
+        <div className="text-center">
+          <Trophy className="mx-auto h-12 w-12 text-white/80 sm:h-16 sm:w-16" aria-hidden />
+          <p className="mt-3 text-xs uppercase tracking-[0.35em] text-white/50 sm:text-sm">
+            Vítěz turnaje
+          </p>
+          <p className="mt-1 text-balance text-4xl font-bold tracking-tight sm:text-6xl lg:text-7xl">
+            {podium.first}
+          </p>
+        </div>
+        <div className="flex items-end justify-center gap-3 sm:gap-5">
+          <PodiumBlock place={2} name={podium.second} />
+          <PodiumBlock place={1} name={podium.first} />
+          <PodiumBlock place={3} name={podium.third} />
+        </div>
+      </section>
+
+      {hasBracket && (
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-6">
+          <h2 className="mb-6 text-xl font-semibold text-white/70">Pavouk</h2>
+          <BracketView matches={bracket} variant="tv" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PodiumBlock({ place, name }: { place: 1 | 2 | 3; name: string | null }) {
+  // Keep the slot (empty) when a place is missing so 1st stays centered.
+  if (!name) return <div className="w-24 sm:w-36 lg:w-44" aria-hidden />;
+  const tone =
+    place === 1
+      ? "h-44 bg-white/15 border-white/40 sm:h-56"
+      : place === 2
+        ? "h-32 bg-white/[0.08] border-white/20 sm:h-40"
+        : "h-24 bg-white/5 border-white/15 sm:h-32";
+  return (
+    <div className="flex w-24 flex-col items-center sm:w-36 lg:w-44">
+      <p className="mb-2 max-w-full truncate text-center text-sm font-semibold sm:text-lg">
+        {name}
+      </p>
+      <div
+        className={`flex w-full items-start justify-center rounded-t-xl border pt-3 ${tone}`}
+      >
+        <span className="font-mono text-3xl font-bold tabular-nums text-white sm:text-5xl">
+          {place}
+        </span>
+      </div>
     </div>
   );
 }
@@ -236,7 +340,9 @@ function BigMatchCard({ match }: { match: MatchListItem }) {
             <span className="text-xs uppercase tracking-widest text-white/40">
               Vsazeno{" "}
               <span className="ml-1 font-mono text-base text-white">
-                {match.totalPool > 0 ? poolFmt.format(match.totalPool) : "—"}
+                {match.totalPool > 0
+                  ? `${poolFmt.format(match.totalPool)} jablka`
+                  : "—"}
               </span>
             </span>
             <OddsPill name={match.playerB} odds={match.oddsB} />
@@ -393,7 +499,7 @@ function NextUpCard({ match }: { match: MatchListItem }) {
             total={match.totalPool}
           />
           <p className="text-right text-xs text-white/40">
-            Pool: {poolFmt.format(match.totalPool)}
+            Pool: {poolFmt.format(match.totalPool)} jablka
           </p>
         </div>
       )}

@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { isAdmin, type Role } from "@/lib/roles";
 
 type Props = {
   username: string;
@@ -8,7 +9,7 @@ type Props = {
   avatarUrl: string | null;
   bio: string | null;
   capital: string;
-  role: "user" | "admin";
+  role: Role;
 };
 
 export function ProfileCard({
@@ -40,7 +41,7 @@ export function ProfileCard({
         <div className="space-y-1">
           <h2 className="text-xl font-semibold">{displayName}</h2>
           <p className="text-xs font-mono text-muted-foreground">@{username}</p>
-          {role === "admin" && <Badge variant="outline">admin</Badge>}
+          {isAdmin(role) && <Badge variant="outline">{role}</Badge>}
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -49,7 +50,7 @@ export function ProfileCard({
           <span className="text-muted-foreground">Kapitál:</span>
           <span className="font-mono font-semibold">{formattedCapital}</span>
           <span className="text-xs uppercase tracking-wider text-muted-foreground">
-            Chips
+            jablka
           </span>
         </div>
       </CardContent>
