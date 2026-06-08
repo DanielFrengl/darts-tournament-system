@@ -7,6 +7,7 @@ import { users } from "@/db/schema";
 import { AppShell } from "@/components/layout/AppShell";
 import { displayName } from "@/lib/names";
 import { getAppSettings } from "@/lib/settings";
+import { tournamentService } from "@/lib/tournament";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const session = await auth();
@@ -26,6 +27,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     .where(eq(users.id, session.user.id));
   if (!me) redirect("/login");
   const settings = await getAppSettings();
+  const activeTournament = await tournamentService.getActive();
 
   return (
     <AppShell
@@ -39,6 +41,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       }}
       systemName={settings.name}
       logoUrl={settings.logoUrl}
+      activeTournamentId={activeTournament?.id ?? null}
     >
       {children}
     </AppShell>

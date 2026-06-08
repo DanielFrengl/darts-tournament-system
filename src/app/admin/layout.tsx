@@ -7,11 +7,13 @@ import { users } from "@/db/schema";
 import { AppShell } from "@/components/layout/AppShell";
 import { displayName } from "@/lib/names";
 import { getAppSettings } from "@/lib/settings";
+import { tournamentService } from "@/lib/tournament";
+import { isAdmin } from "@/lib/roles";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await auth();
   if (!session?.user) redirect("/login");
-  if (session.user.role !== "admin") redirect("/");
+  if (!isAdmin(session.user.role)) redirect("/");
 
   const [me] = await db
     .select({
@@ -26,6 +28,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     .where(eq(users.id, session.user.id));
   if (!me) redirect("/login");
   const settings = await getAppSettings();
+  const activeTournament = await tournamentService.getActive();
 
   return (
     <AppShell
@@ -39,6 +42,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       }}
       systemName={settings.name}
       logoUrl={settings.logoUrl}
+      activeTournamentId={activeTournament?.id ?? null}
     >
       {children}
     </AppShell>

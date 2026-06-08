@@ -46,9 +46,11 @@ export async function onLegStarted(legId: string, matchId: string, legNumber: nu
     if (legNumber === 1) {
       // Toast-worthy: match transitions to live.
       const summary = await buildMatchSummary(matchId);
+      const players = await buildMatchPlayers(matchId);
       publish(`tournament:${m.tournamentId}`, "match_started", {
         matchId,
         summary,
+        ...players,
       });
     } else {
       publish(`tournament:${m.tournamentId}`, "match_updated", { matchId });
@@ -124,9 +126,13 @@ export async function onLegFinished({
     publish(`tournament:${m.tournamentId}`, "standings_updated", { matchId });
     if (matchFinished) {
       const summary = await buildMatchSummary(matchId);
+      const players = await buildMatchPlayers(matchId);
       publish(`tournament:${m.tournamentId}`, "match_finished", {
         matchId,
         summary,
+        ...players,
+        scoreA,
+        scoreB,
       });
       publish(`tournament:${m.tournamentId}`, "bracket_updated", { matchId });
     }
@@ -177,6 +183,34 @@ async function buildMatchSummary(matchId: string): Promise<string | null> {
     return `${a.name} vs ${b.name}`;
   }
   return `${a.name} vs ${b.name}`;
+}
+
+/**
+ * Structured player/winner names for a match, used so the client can
+ * render clean toasts without re-parsing the summary string.
+ */
+async function buildMatchPlayers(matchId: string): Promise<{
+  playerA: string | null;
+  playerB: string | null;
+  winner: string | null;
+}> {
+  const [m] = await db.select().from(matches).where(eq(matches.id, matchId));
+  if (!m) return { playerA: null, playerB: null, winner: null };
+  const ids = [m.playerAId, m.playerBId].filter((x): x is string => !!x);
+  if (ids.length < 2) return { playerA: null, playerB: null, winner: null };
+  const { players: playersTable } = await import("@/db/schema");
+  const [a] = await db
+    .select()
+    .from(playersTable)
+    .where(eq(playersTable.id, ids[0]!));
+  const [b] = await db
+    .select()
+    .from(playersTable)
+    .where(eq(playersTable.id, ids[1]!));
+  if (!a || !b) return { playerA: null, playerB: null, winner: null };
+  const winner =
+    m.winnerId == null ? null : m.winnerId === a.id ? a.name : b.name;
+  return { playerA: a.name, playerB: b.name, winner };
 }
 
 async function selectionsOfMarketByLeg(legId: string): Promise<string[]> {

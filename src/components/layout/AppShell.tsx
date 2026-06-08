@@ -5,8 +5,8 @@ import { UserMenu } from "@/components/layout/UserMenu";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { UserLiveSync } from "@/components/layout/UserLiveSync";
 import { CapitalDisplay } from "@/components/user/CapitalDisplay";
-
-type Role = "user" | "admin";
+import { Badge } from "@/components/ui/badge";
+import { isDebug, type Role } from "@/lib/roles";
 
 export type AppShellUser = {
   id: string;
@@ -26,16 +26,18 @@ export function AppShell({
   user,
   systemName,
   logoUrl,
+  activeTournamentId,
   children,
 }: {
   user: AppShellUser;
   systemName: string;
   logoUrl: string;
+  activeTournamentId?: string | null;
   children: ReactNode;
 }) {
   return (
     <div className="flex min-h-screen bg-background">
-      <UserLiveSync userId={user.id} />
+      <UserLiveSync userId={user.id} tournamentId={activeTournamentId ?? null} />
       <Sidebar role={user.role} systemName={systemName} logoUrl={logoUrl} />
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b bg-card/95 p-3 backdrop-blur supports-backdrop-filter:bg-card/60 sm:px-6">
@@ -50,6 +52,11 @@ export function AppShell({
             <span className="truncate text-sm font-semibold">{systemName}</span>
           </div>
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
+            {isDebug(user.role) && (
+              <Badge variant="outline" title="Debug režim: ničivé akce povoleny">
+                Debug
+              </Badge>
+            )}
             <CapitalDisplay capital={user.capital} />
             <ThemeToggle />
             <UserMenu
