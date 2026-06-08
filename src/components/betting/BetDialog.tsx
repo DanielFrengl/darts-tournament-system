@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { placeBetAction } from "@/app/(app)/match/[id]/actions";
+import { formatJablka } from "@/lib/jablka";
 
 export type BetTarget = {
   selectionId: string;
@@ -58,7 +59,7 @@ export function BetDialog({
       const r = await placeBetAction(target!.selectionId, numericStake, matchId);
       if (r.ok) {
         toast.success(
-          `Sázka přijata. Možná výhra ${r.payout.toFixed(2)}`
+          `Sázka přijata. Možná výhra ${formatJablka(r.payout)}`
         );
         onClose();
         router.refresh();
@@ -91,13 +92,13 @@ export function BetDialog({
               required
             />
             <p className="text-xs text-muted-foreground">
-              Kapitál: {capital.toFixed(2)} · max: {maxStake.toFixed(2)}
+              Kapitál: {formatJablka(capital)} · max: {formatJablka(maxStake)}
             </p>
           </div>
           {validStake && (
             <div className="rounded border bg-muted p-3 text-sm">
               Možná výhra:{" "}
-              <span className="font-mono font-bold">{potentialPayout.toFixed(2)}</span>
+              <span className="font-mono font-bold">{formatJablka(potentialPayout)}</span>
             </div>
           )}
           {overMax && (
