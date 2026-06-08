@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Moon, Sun, Monitor } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
@@ -13,8 +13,14 @@ import { Button } from "@/components/ui/button";
 
 export function ThemeToggle() {
   const { theme, setTheme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  // Avoid a hydration mismatch: render the dark icon on the server / first
+  // paint, then switch to the resolved theme once mounted on the client.
+  // useSyncExternalStore gives us "is client" without a setState-in-effect.
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
   const current = mounted ? resolvedTheme : "dark";
 
   return (
