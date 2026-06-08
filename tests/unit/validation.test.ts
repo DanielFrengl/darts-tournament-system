@@ -10,7 +10,8 @@ describe("RegisterSchema", () => {
   it("accepts valid input", () => {
     const r = RegisterSchema.safeParse({
       email: "test@example.com",
-      username: "karel_99",
+      firstName: "Karel",
+      lastName: "Novák",
       password: "hunter2hunter",
     });
     expect(r.success).toBe(true);
@@ -19,25 +20,28 @@ describe("RegisterSchema", () => {
   it("rejects bad email", () => {
     const r = RegisterSchema.safeParse({
       email: "no-at",
-      username: "karel",
+      firstName: "Karel",
+      lastName: "Novák",
       password: "longenough",
     });
     expect(r.success).toBe(false);
   });
 
-  it("rejects short username", () => {
+  it("rejects missing name", () => {
     const r = RegisterSchema.safeParse({
       email: "a@b.cz",
-      username: "ab",
+      firstName: "",
+      lastName: "Novák",
       password: "longenough",
     });
     expect(r.success).toBe(false);
   });
 
-  it("rejects username with spaces", () => {
+  it("rejects name with digits", () => {
     const r = RegisterSchema.safeParse({
       email: "a@b.cz",
-      username: "with space",
+      firstName: "Karel99",
+      lastName: "Novák",
       password: "longenough",
     });
     expect(r.success).toBe(false);
@@ -46,7 +50,8 @@ describe("RegisterSchema", () => {
   it("rejects short password", () => {
     const r = RegisterSchema.safeParse({
       email: "a@b.cz",
-      username: "karel",
+      firstName: "Karel",
+      lastName: "Novák",
       password: "short",
     });
     expect(r.success).toBe(false);

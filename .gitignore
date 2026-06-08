@@ -51,3 +51,7 @@ next-env.d.ts
 /playwright-report/
 /coverage/
 .tmp-screenshots/
+tests/e2e/.fixture.json
+
+# stray crash dumps
+*.stackdump
