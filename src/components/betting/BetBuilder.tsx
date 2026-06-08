@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Trash2, X } from "lucide-react";
 import { placeParlayAction } from "@/app/(app)/bet-builder/actions";
+import { formatJablka } from "@/lib/jablka";
 
 export type BuilderSelectionVM = {
   id: string;
@@ -257,7 +258,7 @@ export function BetBuilder({
                 placeholder={`max ${fmt.format(maxStake)}`}
               />
               <p className="text-xs text-muted-foreground">
-                Kapitál: {fmt.format(capital)} jablka · max sázka{" "}
+                Kapitál: {formatJablka(capital)} · max sázka{" "}
                 {fmt.format(maxStake)} ({(maxStakePct * 100).toFixed(0)}%)
               </p>
             </div>

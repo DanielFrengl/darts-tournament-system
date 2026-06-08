@@ -4,8 +4,7 @@ import { useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useLive, type LiveEvent } from "@/lib/use-live";
-
-const fmt = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+import { formatJablka } from "@/lib/jablka";
 
 /**
  * Subscribes to the user's personal channel (bet outcomes) and, when a
@@ -40,7 +39,7 @@ export function UserLiveSync({
           ? `Akumulátor (${data.legs}×) vyhrál!`
           : "Sázka vyhrála!",
         {
-          description: `+${fmt.format(payout)} jablka`,
+          description: `+${formatJablka(payout)}`,
         }
       );
     } else if (e.event === "bet_lost") {
@@ -48,14 +47,14 @@ export function UserLiveSync({
       const isParlay = data.kind === "parlay";
       toast.error(isParlay ? "Akumulátor prohrál" : "Sázka neprošla", {
         description: data.stake
-          ? `Vklad ${fmt.format(Number(data.stake))} jablka`
+          ? `Vklad ${formatJablka(Number(data.stake))}`
           : undefined,
       });
     } else if (e.event === "bet_refunded") {
       const data = (e.data ?? {}) as { refund?: number };
       toast.info("Sázka refundována", {
         description: data.refund
-          ? `Vráceno ${fmt.format(Number(data.refund))} jablka`
+          ? `Vráceno ${formatJablka(Number(data.refund))}`
           : undefined,
       });
     } else if (e.event === "match_started") {

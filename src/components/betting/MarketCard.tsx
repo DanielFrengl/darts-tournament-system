@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { formatJablka } from "@/lib/jablka";
 import { BetDialog, type BetTarget } from "./BetDialog";
 
 export type SelectionVM = {
@@ -99,7 +100,7 @@ export function MarketCard({
             <p className="mt-3 text-xs text-muted-foreground">
               Pool celkem:{" "}
               <span className="font-mono text-foreground">
-                {poolFmt.format(market.totalPool)} jablka
+                {formatJablka(market.totalPool)}
               </span>
             </p>
           )}

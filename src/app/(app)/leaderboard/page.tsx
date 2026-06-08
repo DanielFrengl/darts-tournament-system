@@ -15,6 +15,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { db } from "@/db/client";
 import { users } from "@/db/schema";
 import { displayName } from "@/lib/names";
+import { jablkaWord } from "@/lib/jablka";
 import { tournamentService } from "@/lib/tournament";
 import { userStats } from "@/lib/user-stats";
 import {
@@ -214,7 +215,9 @@ function LeaderboardTable({ rows }: { rows: FullRow[] }) {
               </TableCell>
               <TableCell className="text-right font-mono">
                 {fmt.format(r.capital)}
-                <span className="ml-1 text-xs text-muted-foreground">jablka</span>
+                <span className="ml-1 text-xs text-muted-foreground">
+                  {jablkaWord(r.capital)}
+                </span>
               </TableCell>
             </TableRow>
           ))}

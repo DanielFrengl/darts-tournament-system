@@ -2,6 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { isAdmin, type Role } from "@/lib/roles";
+import { jablkaWord } from "@/lib/jablka";
 
 type Props = {
   username: string;
@@ -50,7 +51,7 @@ export function ProfileCard({
           <span className="text-muted-foreground">Kapitál:</span>
           <span className="font-mono font-semibold">{formattedCapital}</span>
           <span className="text-xs uppercase tracking-wider text-muted-foreground">
-            jablka
+            {jablkaWord(Number(capital))}
           </span>
         </div>
       </CardContent>

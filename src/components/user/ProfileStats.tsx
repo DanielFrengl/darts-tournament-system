@@ -1,4 +1,5 @@
 import type { UserStats } from "@/lib/user-stats";
+import { jablkaWord } from "@/lib/jablka";
 
 const fmt = new Intl.NumberFormat("cs-CZ", {
   minimumFractionDigits: 0,
@@ -34,7 +35,7 @@ export function ProfileStats({
           <Stat
             label="Čistý zisk"
             value={`${stats.netProfit > 0 ? "+" : ""}${fmt.format(stats.netProfit)}`}
-            suffix="jablka"
+            suffix={jablkaWord(stats.netProfit)}
             tone={
               stats.netProfit > 0
                 ? "positive"
@@ -62,8 +63,8 @@ export function ProfileStats({
             sub={`${stats.won} V · ${stats.lost} P`}
           />
           <Stat label="Sázek" value={String(stats.betCount)} sub={`${stats.open} otevř.`} />
-          <Stat label="Obrat" value={fmt.format(stats.totalStaked)} suffix="jablka" />
-          <Stat label="Návrat" value={fmt.format(stats.totalReturn)} suffix="jablka" />
+          <Stat label="Obrat" value={fmt.format(stats.totalStaked)} suffix={jablkaWord(stats.totalStaked)} />
+          <Stat label="Návrat" value={fmt.format(stats.totalReturn)} suffix={jablkaWord(stats.totalReturn)} />
           <Stat label="Výhry" value={String(stats.won)} tone="positive" />
           <Stat label="Prohry" value={String(stats.lost)} tone="negative" />
         </div>

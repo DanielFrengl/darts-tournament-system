@@ -10,6 +10,7 @@ import type { MatchListItem } from "@/components/tournament/MatchListCard";
 import { BracketView, type BracketMatchVM } from "@/components/tournament/BracketView";
 import type { GroupView } from "@/lib/tournament-views";
 import { LiveDot } from "@/components/ui/live-dot";
+import { formatJablka } from "@/lib/jablka";
 
 const poolFmt = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
 
@@ -340,9 +341,7 @@ function BigMatchCard({ match }: { match: MatchListItem }) {
             <span className="text-xs uppercase tracking-widest text-white/40">
               Vsazeno{" "}
               <span className="ml-1 font-mono text-base text-white">
-                {match.totalPool > 0
-                  ? `${poolFmt.format(match.totalPool)} jablka`
-                  : "—"}
+                {match.totalPool > 0 ? formatJablka(match.totalPool) : "—"}
               </span>
             </span>
             <OddsPill name={match.playerB} odds={match.oddsB} />
@@ -499,7 +498,7 @@ function NextUpCard({ match }: { match: MatchListItem }) {
             total={match.totalPool}
           />
           <p className="text-right text-xs text-white/40">
-            Pool: {poolFmt.format(match.totalPool)} jablka
+            Pool: {formatJablka(match.totalPool)}
           </p>
         </div>
       )}

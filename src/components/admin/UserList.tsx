@@ -19,6 +19,7 @@ import {
   resetAllStats,
 } from "@/app/admin/users/actions";
 import type { Role } from "@/lib/roles";
+import { jablkaWord } from "@/lib/jablka";
 import { CapitalAdjustDialog } from "./CapitalAdjustDialog";
 
 export type AdminUser = {
@@ -153,7 +154,9 @@ export function UserList({
               </TableCell>
               <TableCell className="font-mono">
                 {fmt.format(Number(u.capital))}
-                <span className="ml-1 text-xs text-muted-foreground">jablka</span>
+                <span className="ml-1 text-xs text-muted-foreground">
+                  {jablkaWord(Number(u.capital))}
+                </span>
               </TableCell>
               <TableCell className="space-x-2">
                 <Button size="sm" variant="outline" onClick={() => setAdjustingUser(u)}>
