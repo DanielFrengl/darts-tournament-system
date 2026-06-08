@@ -100,19 +100,31 @@ export async function onLegFinished({
     const matchLosing = matchAllSelections.filter((id) => !matchWinning.includes(id));
     await bettingService.settleSelections(matchWinning, matchLosing);
 
-    // Update both players' ELO ratings before advancing the bracket so
-    // any seeded markets for next-round matches use the updated numbers.
-    await updateMatchElo(matchId, matchWinnerId);
+    // Bracket choreography runs after settlement. It must NOT be able to
+    // suppress the match_finished notification published below — bets are
+    // already settled, so a bracket-advancement failure (e.g. inconsistent
+    // seeding) should be logged, not swallow the "round end" event players
+    // are waiting on.
+    try {
+      // Update both players' ELO ratings before advancing the bracket so
+      // any seeded markets for next-round matches use the updated numbers.
+      await updateMatchElo(matchId, matchWinnerId);
 
-    // Move the bracket forward (creates next-round matches as needed)
-    // and seed markets for any newly created matches.
-    await bracketService.advanceWinner(matchId);
-    await createMarketsForNewMatches(matchId);
+      // Move the bracket forward (creates next-round matches as needed)
+      // and seed markets for any newly created matches.
+      await bracketService.advanceWinner(matchId);
+      await createMarketsForNewMatches(matchId);
 
-    // Auto-create playoff bracket when the last group match finishes.
-    await maybeAutoStartPlayoff(matchId);
-    // Auto-finish the tournament when the final concludes.
-    await maybeAutoFinishTournament(matchId);
+      // Auto-create playoff bracket when the last group match finishes.
+      await maybeAutoStartPlayoff(matchId);
+      // Auto-finish the tournament when the final concludes.
+      await maybeAutoFinishTournament(matchId);
+    } catch (err) {
+      console.error(
+        `[match-lifecycle] bracket advancement failed for match ${matchId}:`,
+        err
+      );
+    }
   }
 
   publish(`match:${matchId}`, matchFinished ? "finished" : "leg_finished", {
