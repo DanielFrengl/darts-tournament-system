@@ -43,5 +43,6 @@ export const config = {
     // path looks like a static asset (has a file extension).
     "/((?!api|_next/static|_next/image|favicon.ico|display|.*\\.[a-zA-Z0-9]+$).*)",
   ],
-  runtime: "nodejs",
+  // Proxy (formerly Middleware) always runs on the Node.js runtime in Next 16,
+  // so a `runtime` config key is no longer allowed here.
 };
