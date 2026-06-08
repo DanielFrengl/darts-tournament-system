@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowRight } from "lucide-react";
 import { BetDialog, type BetTarget } from "@/components/betting/BetDialog";
 import { LiveDot } from "@/components/ui/live-dot";
+import { formatJablka } from "@/lib/jablka";
 
 export type MatchListItem = {
   id: string;
@@ -50,57 +51,74 @@ export function MatchListCard({
     !finished &&
     !cancelled;
 
+  const header = (
+    <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center gap-2">
+        {match.number != null && (
+          <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
+            #{match.number}
+          </span>
+        )}
+        <Badge variant="outline" className="text-xs">
+          {match.phaseLabel}
+        </Badge>
+        {live && (
+          <Badge variant="default" className="flex items-center gap-1.5 text-xs">
+            <LiveDot size="sm" />
+            LIVE
+          </Badge>
+        )}
+        {finished && (
+          <Badge variant="secondary" className="text-xs">
+            Hotovo
+          </Badge>
+        )}
+        {cancelled && (
+          <Badge variant="destructive" className="text-xs">
+            Zrušeno
+          </Badge>
+        )}
+      </div>
+      <span className="font-mono text-xs text-muted-foreground">bo{match.bestOf}</span>
+    </div>
+  );
+
+  const score = (
+    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+      <PlayerSlot
+        name={match.playerA}
+        winner={match.winnerSide === "A"}
+        loser={finished && match.winnerSide === "B"}
+        align="right"
+      />
+      <div
+        className={`flex items-center gap-2 font-mono text-3xl font-bold tabular-nums leading-none ${
+          live ? "text-foreground" : ""
+        }`}
+      >
+        <span className={match.winnerSide === "A" ? "" : "text-muted-foreground"}>
+          {match.scoreA}
+        </span>
+        <span className="text-base text-muted-foreground">:</span>
+        <span className={match.winnerSide === "B" ? "" : "text-muted-foreground"}>
+          {match.scoreB}
+        </span>
+      </div>
+      <PlayerSlot
+        name={match.playerB}
+        winner={match.winnerSide === "B"}
+        loser={finished && match.winnerSide === "A"}
+        align="left"
+      />
+    </div>
+  );
+
   return (
     <>
-      <div className="group rounded-lg border bg-card p-4 transition-colors hover:border-foreground/30">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            {match.number != null && (
-              <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
-                #{match.number}
-              </span>
-            )}
-            <Badge variant="outline" className="text-xs">
-              {match.phaseLabel}
-            </Badge>
-            {live && (
-              <Badge variant="default" className="flex items-center gap-1.5 text-xs">
-                <LiveDot size="sm" />
-                LIVE
-              </Badge>
-            )}
-            {finished && (
-              <Badge variant="secondary" className="text-xs">
-                Hotovo
-              </Badge>
-            )}
-            {cancelled && (
-              <Badge variant="destructive" className="text-xs">
-                Zrušeno
-              </Badge>
-            )}
-          </div>
-          <span className="text-xs text-muted-foreground">bo{match.bestOf}</span>
-        </div>
-
-        <div className="mb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-          <PlayerSlot
-            name={match.playerA}
-            winner={match.winnerSide === "A"}
-            align="right"
-          />
-          <span className="font-mono text-2xl font-bold tabular-nums">
-            {match.scoreA} <span className="text-muted-foreground">:</span>{" "}
-            {match.scoreB}
-          </span>
-          <PlayerSlot
-            name={match.playerB}
-            winner={match.winnerSide === "B"}
-            align="left"
-          />
-        </div>
-
-        {oddsAvailable ? (
+      {oddsAvailable ? (
+        <div className="group rounded-lg border bg-card p-4 transition-colors hover:border-foreground/30">
+          <div className="mb-4">{header}</div>
+          <div className="mb-4">{score}</div>
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-2 text-sm">
               <OddsButton
@@ -134,13 +152,11 @@ export function MatchListCard({
                 }
               />
             </div>
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center justify-between border-t pt-2 text-xs text-muted-foreground">
               <span>
                 Vsazeno celkem:{" "}
                 <span className="font-mono text-foreground">
-                  {match.totalPool > 0
-                    ? `${formatPool(match.totalPool)} jablka`
-                    : "—"}
+                  {match.totalPool > 0 ? formatJablka(match.totalPool) : "—"}
                 </span>
               </span>
               <Link
@@ -152,16 +168,23 @@ export function MatchListCard({
               </Link>
             </div>
           </div>
-        ) : (
-          <Link
-            href={`/match/${match.id}`}
-            className="flex items-center justify-end gap-1 text-xs text-muted-foreground hover:text-foreground"
-          >
-            Detail
-            <ArrowRight className="h-3 w-3" />
-          </Link>
-        )}
-      </div>
+        </div>
+      ) : (
+        <Link
+          href={`/match/${match.id}`}
+          className="group block rounded-lg border bg-card p-4 transition-all hover:border-foreground/30 hover:shadow-[var(--shadow-card-hover)]"
+        >
+          <div className="mb-4">{header}</div>
+          {score}
+          <div className="mt-4 flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
+            <span className="uppercase tracking-wider">{footerLabel(match.status)}</span>
+            <span className="flex items-center gap-1 font-medium text-foreground/70 transition-colors group-hover:text-foreground">
+              Detail zápasu
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+            </span>
+          </div>
+        </Link>
+      )}
       <BetDialog
         matchId={match.id}
         target={target}
@@ -173,28 +196,39 @@ export function MatchListCard({
   );
 }
 
+function footerLabel(status: MatchListItem["status"]): string {
+  switch (status) {
+    case "live":
+      return "Živé skóre";
+    case "finished":
+      return "Konečný výsledek";
+    case "cancelled":
+      return "Zrušeno";
+    default:
+      return "Naplánováno";
+  }
+}
+
 function PlayerSlot({
   name,
   winner,
+  loser,
   align,
 }: {
   name: string;
   winner: boolean;
+  loser?: boolean;
   align: "left" | "right";
 }) {
   return (
     <span
-      className={`truncate text-sm ${align === "right" ? "text-right" : "text-left"} ${winner ? "font-semibold" : ""}`}
+      className={`block truncate text-sm ${align === "right" ? "text-right" : "text-left"} ${
+        winner ? "font-semibold text-foreground" : loser ? "text-muted-foreground" : ""
+      }`}
     >
       {name}
     </span>
   );
-}
-
-const poolFmt = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
-function formatPool(pool: number): string {
-  if (pool <= 0) return "—";
-  return poolFmt.format(pool);
 }
 
 function OddsButton({
