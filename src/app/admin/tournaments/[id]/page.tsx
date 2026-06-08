@@ -11,6 +11,8 @@ import { TournamentControls } from "@/components/admin/TournamentControls";
 import { TournamentAdminActions } from "@/components/admin/TournamentAdminActions";
 import { AdvancePerGroupFix } from "@/components/admin/AdvancePerGroupFix";
 import { WizardNav } from "@/components/admin/WizardNav";
+import { auth } from "@/lib/auth";
+import { isDebug } from "@/lib/roles";
 
 export default async function AdminTournamentDetail({
   params,
@@ -20,6 +22,9 @@ export default async function AdminTournamentDetail({
   const { id } = await params;
   const t = await tournamentService.get(id);
   if (!t) notFound();
+
+  const session = await auth();
+  const canDebug = isDebug(session?.user?.role);
 
   const players = await playerService.list(id);
   const groups = await playerService.listGroups(id);
@@ -56,6 +61,7 @@ export default async function AdminTournamentDetail({
         tournamentId={id}
         currentName={t.name}
         status={t.status}
+        canDebug={canDebug}
       />
 
       {(t.status === "draft" || t.status === "groups") && (

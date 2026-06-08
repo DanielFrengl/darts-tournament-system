@@ -5,6 +5,7 @@ import { db } from "@/db/client";
 import { users } from "@/db/schema";
 import { verifyPassword } from "@/lib/password";
 import { LoginSchema } from "@/lib/validation";
+import type { Role } from "@/lib/roles";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   // Required behind a reverse proxy (Railway, Fly, etc.) so NextAuth
@@ -40,7 +41,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id as string;
-        token.role = (user as { role: "user" | "admin" }).role;
+        token.role = (user as { role: Role }).role;
         return token;
       }
       // On subsequent requests, re-read the role from the DB so role
@@ -57,7 +58,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (token.id && session.user) {
         session.user.id = token.id as string;
-        session.user.role = token.role as "user" | "admin";
+        session.user.role = token.role as Role;
       }
       return session;
     },
@@ -68,17 +69,17 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string;
-      role: "user" | "admin";
+      role: Role;
     } & DefaultSession["user"];
   }
   interface User {
-    role: "user" | "admin";
+    role: Role;
   }
 }
 
 declare module "@auth/core/jwt" {
   interface JWT {
     id: string;
-    role: "user" | "admin";
+    role: Role;
   }
 }

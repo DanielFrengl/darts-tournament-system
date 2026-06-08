@@ -1,6 +1,7 @@
 import { createUploadthing, type FileRouter } from "uploadthing/next";
 import { UploadThingError } from "uploadthing/server";
 import { auth } from "@/lib/auth";
+import { isAdmin } from "@/lib/roles";
 
 const f = createUploadthing();
 
@@ -17,7 +18,7 @@ export const ourFileRouter = {
   logo: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
     .middleware(async () => {
       const session = await auth();
-      if (!session?.user || session.user.role !== "admin") {
+      if (!session?.user || !isAdmin(session.user.role)) {
         throw new UploadThingError("Admin only");
       }
       return { adminId: session.user.id };

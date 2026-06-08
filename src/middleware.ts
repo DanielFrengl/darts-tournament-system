@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import { isAdmin } from "@/lib/roles";
 
 // Routes that don't require a session.
 const PUBLIC_EXACT = new Set(["/login", "/register"]);
@@ -27,7 +28,7 @@ export default auth((req) => {
 
   if (pathname.startsWith(ADMIN_ONLY_PREFIX)) {
     if (!session?.user) return redirectTo(req, "/login");
-    if (session.user.role !== "admin") return redirectTo(req, "/");
+    if (!isAdmin(session.user.role)) return redirectTo(req, "/");
     return NextResponse.next();
   }
 

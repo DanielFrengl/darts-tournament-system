@@ -1,5 +1,12 @@
-import { desc, eq, ne } from "drizzle-orm";
-import { tournaments, type Tournament } from "@/db/schema";
+import { desc, eq, ne, inArray } from "drizzle-orm";
+import {
+  tournaments,
+  markets,
+  marketSelections,
+  bets,
+  transactions,
+  type Tournament,
+} from "@/db/schema";
 import type { DB } from "@/db/client";
 import { publish } from "@/lib/event-bus";
 import {
@@ -96,6 +103,43 @@ export class TournamentService {
     // bets uses ON DELETE RESTRICT on selection_id, so caller must first
     // clear bets if any exist (only allowed in draft, where bets shouldn't).
     await this.db.delete(tournaments).where(eq(tournaments.id, id));
+  }
+
+  /**
+   * Debug-only force delete: removes a tournament in ANY phase, first
+   * clearing the bets that reference its market selections (which use
+   * ON DELETE RESTRICT and would otherwise block the cascade). Parlays
+   * cascade-delete their child bets, and transactions referencing those
+   * bets via betId (no FK) are detached. All in one transaction.
+   */
+  async forceDelete(id: string): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      const sels = await tx
+        .select({ id: marketSelections.id })
+        .from(marketSelections)
+        .innerJoin(markets, eq(marketSelections.marketId, markets.id))
+        .where(eq(markets.tournamentId, id));
+      const selectionIds = sels.map((s) => s.id);
+
+      if (selectionIds.length > 0) {
+        const betRows = await tx
+          .select({ id: bets.id })
+          .from(bets)
+          .where(inArray(bets.selectionId, selectionIds));
+        const betIds = betRows.map((b) => b.id);
+        if (betIds.length > 0) {
+          // Detach transactions that point at these bets (betId has no FK).
+          await tx
+            .update(transactions)
+            .set({ betId: null })
+            .where(inArray(transactions.betId, betIds));
+          await tx.delete(bets).where(inArray(bets.id, betIds));
+        }
+      }
+
+      // Cascades handle groups, players, matches, legs, markets, selections.
+      await tx.delete(tournaments).where(eq(tournaments.id, id));
+    });
   }
 }
 

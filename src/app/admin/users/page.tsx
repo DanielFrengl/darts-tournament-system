@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { displayName } from "@/lib/names";
 import { UserList } from "@/components/admin/UserList";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { isDebug } from "@/lib/roles";
 
 export default async function AdminUsersPage() {
   const session = await auth();
@@ -30,10 +31,16 @@ export default async function AdminUsersPage() {
     capital: u.capital,
   }));
 
+  const canDebug = isDebug(session!.user.role);
+
   return (
     <div className="space-y-6">
       <PageHeader title="Uživatelé" description="Správa hráčů, rolí a kapitálu." />
-      <UserList users={withDisplay} currentUserId={session!.user.id} />
+      <UserList
+        users={withDisplay}
+        currentUserId={session!.user.id}
+        canDebug={canDebug}
+      />
     </div>
   );
 }

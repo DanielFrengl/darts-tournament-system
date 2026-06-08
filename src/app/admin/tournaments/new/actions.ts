@@ -9,6 +9,7 @@ import {
   TournamentConfigSchema,
   type TournamentConfig,
 } from "@/lib/tournament-config";
+import { isAdmin } from "@/lib/roles";
 
 type CreateInput = {
   name: string;
@@ -19,7 +20,7 @@ type CreateResult = { ok: true; id: string } | { ok: false; error: string };
 
 export async function createTournament(input: CreateInput): Promise<CreateResult> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
+  if (!session?.user || !isAdmin(session.user.role)) {
     return { ok: false, error: "Forbidden" };
   }
   const parsed = TournamentConfigSchema.safeParse(input.config);

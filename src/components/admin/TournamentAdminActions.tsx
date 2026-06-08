@@ -15,17 +15,21 @@ export function TournamentAdminActions({
   tournamentId,
   currentName,
   status,
+  canDebug = false,
 }: {
   tournamentId: string;
   currentName: string;
   status: "draft" | "groups" | "playoff" | "finished";
+  canDebug?: boolean;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(currentName);
 
-  const canDelete = status === "draft" || status === "finished";
+  // Debug users can force-delete a tournament in any phase.
+  const canDelete = canDebug || status === "draft" || status === "finished";
+  const isForce = canDebug && status !== "draft" && status !== "finished";
 
   function onSave(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -42,11 +46,10 @@ export function TournamentAdminActions({
   }
 
   function onDelete() {
-    if (
-      !confirm(
-        `Opravdu smazat turnaj "${currentName}"?\nTato akce je nevratná.`
-      )
-    ) {
+    const message = isForce
+      ? `DEBUG: Vynuceně smazat ROZEHRANÝ turnaj "${currentName}"?\nVšechny zápasy, sázky a kurzy budou nenávratně odstraněny.`
+      : `Opravdu smazat turnaj "${currentName}"?\nTato akce je nevratná.`;
+    if (!confirm(message)) {
       return;
     }
     start(async () => {
@@ -108,13 +111,15 @@ export function TournamentAdminActions({
         disabled={pending || !canDelete}
         className="text-destructive hover:bg-destructive/10 hover:text-destructive"
         title={
-          canDelete
-            ? "Smazat turnaj"
-            : "Smazání možné jen v draftu nebo po dohrání"
+          isForce
+            ? "DEBUG: vynucené smazání rozehraného turnaje"
+            : canDelete
+              ? "Smazat turnaj"
+              : "Smazání možné jen v draftu nebo po dohrání"
         }
       >
         <Trash2 className="mr-1 h-4 w-4" />
-        Smazat
+        {isForce ? "Vynutit smazání" : "Smazat"}
       </Button>
     </div>
   );

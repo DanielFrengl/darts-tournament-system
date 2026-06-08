@@ -3,12 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { playerService } from "@/lib/player";
+import { isAdmin } from "@/lib/roles";
 
 type Result = { ok: true } | { ok: false; error: string };
 
 async function requireAdmin(): Promise<boolean> {
   const session = await auth();
-  return session?.user?.role === "admin";
+  return isAdmin(session?.user?.role);
 }
 
 export async function addPlayer(tournamentId: string, name: string): Promise<Result> {

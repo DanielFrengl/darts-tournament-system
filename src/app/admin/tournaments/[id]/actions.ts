@@ -12,6 +12,7 @@ import { marketService } from "@/lib/market";
 import { bettingService } from "@/lib/betting";
 import { capitalService } from "@/lib/capital";
 import { onMatchesCreated } from "@/lib/match-lifecycle";
+import { isAdmin, isDebug } from "@/lib/roles";
 
 type Result = { ok: true } | { ok: false; error: string };
 type StartResult =
@@ -79,16 +80,23 @@ export async function updateAdvancePerGroup(
 
 export async function deleteTournament(tournamentId: string): Promise<Result> {
   if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
+  const debug = await requireDebug();
   const t = await tournamentService.get(tournamentId);
   if (!t) return { ok: false, error: "Turnaj nenalezen" };
-  if (t.status !== "draft" && t.status !== "finished") {
+  // Debug users may force-delete a tournament in any phase; regular admins
+  // are restricted to draft/finished as before.
+  if (!debug && t.status !== "draft" && t.status !== "finished") {
     return {
       ok: false,
       error: "Smazat lze jen turnaj v přípravě nebo už dohraný",
     };
   }
   try {
-    await tournamentService.delete(tournamentId);
+    if (debug) {
+      await tournamentService.forceDelete(tournamentId);
+    } else {
+      await tournamentService.delete(tournamentId);
+    }
     revalidatePath("/admin/tournaments");
     revalidatePath("/tournament");
     return { ok: true };
@@ -105,12 +113,17 @@ export async function deleteTournament(tournamentId: string): Promise<Result> {
 
 async function requireAdmin(): Promise<boolean> {
   const session = await auth();
-  return session?.user?.role === "admin";
+  return isAdmin(session?.user?.role);
+}
+
+async function requireDebug(): Promise<boolean> {
+  const session = await auth();
+  return isDebug(session?.user?.role);
 }
 
 async function currentAdminId(): Promise<string | null> {
   const session = await auth();
-  if (session?.user?.role === "admin") return session.user.id;
+  if (isAdmin(session?.user?.role)) return session!.user.id;
   return null;
 }
 

@@ -16,8 +16,7 @@ import {
   Tv,
   Layers,
 } from "lucide-react";
-
-type Role = "user" | "admin";
+import { isAdmin, type Role } from "@/lib/roles";
 
 type NavItem = { href: string; label: string; icon: ReactNode };
 type NavSection = { title?: string; items: NavItem[] };
@@ -89,7 +88,7 @@ export function SidebarNav({
         </div>
       ))}
 
-      {role === "admin" && (
+      {isAdmin(role) && (
         <>
           <div className="my-2 border-t" />
           <p className="px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
