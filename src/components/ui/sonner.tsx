@@ -11,6 +11,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
+      // Always lay multiple toasts out stacked with a gap instead of the
+      // default collapsed pile, so simultaneous toasts (e.g. match finished +
+      // bet won) are all fully visible and never overlap.
+      expand
+      visibleToasts={6}
+      gap={12}
       icons={{
         success: (
           <CircleCheckIcon className="size-4" />
