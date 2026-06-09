@@ -3,7 +3,9 @@ import {
   bets,
   marketSelections,
   markets,
+  matches,
   parlays,
+  transactions,
   users,
   tournaments,
   type Bet,
@@ -22,6 +24,10 @@ export type PlaceBetResult =
 
 export type PlaceParlayResult =
   | { ok: true; parlay: Parlay }
+  | { ok: false; error: string };
+
+export type CancelBetResult =
+  | { ok: true; refund: number }
   | { ok: false; error: string };
 
 export class BettingService {
@@ -117,6 +123,97 @@ export class BettingService {
       .where(eq(marketSelections.id, selectionId));
     if (sel) await this.markets.recomputeOdds(sel.marketId);
     return { ok: true, bet: createdBet };
+  }
+
+  /**
+   * Cancel the user's own open single bet and refund the stake. Allowed
+   * only while the bet is open, the market is still open and the related
+   * match (if any) hasn't started. Parlay legs cannot be cancelled
+   * individually.
+   */
+  async cancelBet(userId: string, betId: string): Promise<CancelBetResult> {
+    let marketId = "";
+    let refund = 0;
+    try {
+      await this.db.transaction(async (tx) => {
+        const [b] = await tx
+          .select()
+          .from(bets)
+          .where(eq(bets.id, betId))
+          .for("update");
+        if (!b || b.userId !== userId) throw new Error("Sázka nenalezena");
+        if (b.parlayId) {
+          throw new Error("Sázku z akumulátoru nelze zrušit samostatně");
+        }
+        if (b.status !== "open") {
+          throw new Error("Sázku už nelze zrušit – není otevřená");
+        }
+        const [sel] = await tx
+          .select()
+          .from(marketSelections)
+          .where(eq(marketSelections.id, b.selectionId));
+        if (!sel) throw new Error("Výběr nenalezen");
+        const [market] = await tx
+          .select()
+          .from(markets)
+          .where(eq(markets.id, sel.marketId))
+          .for("update");
+        if (!market) throw new Error("Trh nenalezen");
+        if (market.status !== "open") {
+          throw new Error("Trh už není otevřený, sázku nelze zrušit");
+        }
+        if (market.matchId) {
+          const [match] = await tx
+            .select()
+            .from(matches)
+            .where(eq(matches.id, market.matchId));
+          if (match && (match.status === "live" || match.status === "finished")) {
+            throw new Error("Zápas už začal, sázku nelze zrušit");
+          }
+        }
+        marketId = market.id;
+        refund = Number(b.stake);
+
+        const [u] = await tx
+          .select({ capital: users.capital })
+          .from(users)
+          .where(eq(users.id, userId))
+          .for("update");
+        if (!u) throw new Error("Uživatel neexistuje");
+        const newBalance = (Number(u.capital) + refund).toFixed(2);
+        await tx
+          .update(users)
+          .set({ capital: newBalance })
+          .where(eq(users.id, userId));
+        await tx
+          .update(bets)
+          .set({
+            status: "refunded",
+            payout: refund.toFixed(2),
+            settledAt: new Date(),
+          })
+          .where(eq(bets.id, b.id));
+        await tx.insert(transactions).values({
+          userId,
+          type: "bet_refund",
+          amount: refund.toFixed(2),
+          balanceAfter: newBalance,
+          betId: b.id,
+          note: "Sázka zrušena uživatelem",
+        });
+      });
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : "Zrušení selhalo",
+      };
+    }
+    publish(`user:${userId}`, "capital_changed");
+    publish(`user:${userId}`, "bet_refunded", { refund, kind: "single" });
+    // Pool changed — recompute (also publishes odds_changed on market +
+    // tournament channels, same as placeBet).
+    if (marketId) await this.markets.recomputeOdds(marketId);
+    return { ok: true, refund };
   }
 
   /**

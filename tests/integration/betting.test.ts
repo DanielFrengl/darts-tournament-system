@@ -139,6 +139,65 @@ describe("BettingService settlement", () => {
     void matchWinnerMarket;
   });
 
+  it("cancelBet refunds stake, marks bet refunded and recomputes odds", async () => {
+    const u = await createUser({ capital: "1000" });
+    const { matchWinnerSelections, matchWinnerMarket } = await setupBettableMatch();
+    const sel = matchWinnerSelections[0]!;
+    const placed = await bettingService.placeBet(u.id, sel.id, 100);
+    expect(placed.ok).toBe(true);
+    if (!placed.ok) return;
+
+    const r = await bettingService.cancelBet(u.id, placed.bet.id);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.refund).toBe(100);
+
+    const [reloadedUser] = await testDb.select().from(users).where(eq(users.id, u.id));
+    expect(Number(reloadedUser?.capital)).toBe(1000);
+
+    const [b] = await testDb.select().from(bets).where(eq(bets.id, placed.bet.id));
+    expect(b?.status).toBe("refunded");
+    expect(Number(b?.payout)).toBe(100);
+
+    const txs = await testDb
+      .select()
+      .from(transactions)
+      .where(eq(transactions.userId, u.id));
+    expect(txs.some((t) => t.type === "bet_refund" && t.betId === placed.bet.id)).toBe(
+      true
+    );
+
+    // Pool is empty again → parimutuel component cleared.
+    const [reloadedSel] = await testDb
+      .select()
+      .from(marketSelections)
+      .where(eq(marketSelections.id, sel.id));
+    expect(reloadedSel?.pariOdds).toBeNull();
+    void matchWinnerMarket;
+  });
+
+  it("cancelBet rejects when the market is no longer open", async () => {
+    const u = await createUser({ capital: "1000" });
+    const { matchWinnerSelections, match } = await setupBettableMatch();
+    const sel = matchWinnerSelections[0]!;
+    const placed = await bettingService.placeBet(u.id, sel.id, 100);
+    expect(placed.ok).toBe(true);
+    if (!placed.ok) return;
+
+    await marketService.closeMatchMarkets(match.id);
+
+    const r = await bettingService.cancelBet(u.id, placed.bet.id);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error).toMatch(/otevřený/);
+
+    // Nothing refunded, bet stays open.
+    const [reloadedUser] = await testDb.select().from(users).where(eq(users.id, u.id));
+    expect(Number(reloadedUser?.capital)).toBe(900);
+    const [b] = await testDb.select().from(bets).where(eq(bets.id, placed.bet.id));
+    expect(b?.status).toBe("open");
+  });
+
   it("refundSelections restores capital and marks bets refunded", async () => {
     const u = await createUser({ capital: "1000" });
     const { matchWinnerSelections, match } = await setupBettableMatch();

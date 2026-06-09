@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { LiveDot } from "@/components/ui/live-dot";
 import { BetStatusBadge, type BetStatus } from "./BetStatusBadge";
+import { CancelBetButton } from "./CancelBetButton";
 
 export type BetEntry = {
   id: string;
@@ -13,6 +14,7 @@ export type BetEntry = {
   lockedOdds: string;
   status: BetStatus;
   payout: string | null;
+  cancellable?: boolean;
 };
 
 export type MatchGroupVM = {
@@ -123,21 +125,26 @@ function MatchGroupCard({ group }: { group: MatchGroupVM }) {
                     </span>
                   </p>
                 </div>
-                <div className="text-right">
-                  <BetStatusBadge status={b.status} />
-                  {b.payout != null && (
-                    <p
-                      className={`mt-1 font-mono ${
-                        b.status === "won"
-                          ? "text-emerald-400"
-                          : b.status === "refunded"
-                            ? ""
-                            : "text-muted-foreground"
-                      }`}
-                    >
-                      {fmt.format(Number(b.payout))}
-                    </p>
+                <div className="flex items-center gap-3 text-right">
+                  {b.cancellable && (
+                    <CancelBetButton betId={b.id} stake={Number(b.stake)} />
                   )}
+                  <div>
+                    <BetStatusBadge status={b.status} />
+                    {b.payout != null && (
+                      <p
+                        className={`mt-1 font-mono ${
+                          b.status === "won"
+                            ? "text-emerald-400"
+                            : b.status === "refunded"
+                              ? ""
+                              : "text-muted-foreground"
+                        }`}
+                      >
+                        {fmt.format(Number(b.payout))}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </li>

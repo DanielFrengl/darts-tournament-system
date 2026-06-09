@@ -227,6 +227,10 @@ async function loadMyBetsData(userId: string) {
       lockedOdds: b.lockedOdds,
       status: b.status,
       payout: b.payout,
+      cancellable:
+        b.status === "open" &&
+        market?.status === "open" &&
+        (!match || (match.status !== "live" && match.status !== "finished")),
     };
 
     if (!match) {
