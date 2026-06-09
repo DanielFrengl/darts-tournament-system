@@ -1,4 +1,4 @@
-import { and, eq, sum } from "drizzle-orm";
+import { and, eq, inArray, sum } from "drizzle-orm";
 import {
   bets,
   legs,
@@ -481,13 +481,21 @@ export class MarketService {
   }
 
   /**
-   * Settle the leg_winner market for a single leg.
+   * Settle the leg_winner market for a single leg. Skips cancelled
+   * (voided) markets — when an undone leg is re-recorded, its voided
+   * market must stay void instead of flipping to settled.
    */
   async settleLegMarket(legId: string, winnerId: string): Promise<string[]> {
     const ms = await this.db
       .select()
       .from(markets)
-      .where(and(eq(markets.legId, legId), eq(markets.type, "leg_winner")));
+      .where(
+        and(
+          eq(markets.legId, legId),
+          eq(markets.type, "leg_winner"),
+          inArray(markets.status, ["open", "closed"])
+        )
+      );
     const winning: string[] = [];
     for (const m of ms) {
       const sels = await this.getSelections(m.id);

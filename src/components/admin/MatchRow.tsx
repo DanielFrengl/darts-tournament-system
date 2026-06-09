@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useEffect, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import {
   startLegAction,
   recordLegAction,
   cancelMatchAction,
+  undoLastLegAction,
 } from "@/app/admin/tournaments/[id]/matches/actions";
 
 type Player = { id: string; name: string };
@@ -36,10 +37,13 @@ export function MatchRow({
   tournamentId,
   match,
   number,
+  hotkeys = false,
 }: {
   tournamentId: string;
   match: Match;
   number?: number;
+  /** Enable keyboard shortcuts (A/L = leg winner, Z = undo). Only set on the focused match in the play page. */
+  hotkeys?: boolean;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -47,6 +51,10 @@ export function MatchRow({
   const isLive = match.status === "live";
   const isFinished = match.status === "finished" || match.status === "cancelled";
   const liveLeg = match.legs.find((l) => l.status === "live");
+  const canUndo =
+    isLive &&
+    !liveLeg &&
+    match.legs.some((l) => l.status === "finished" && l.winnerId);
 
   function startLegClick() {
     start(async () => {
@@ -72,6 +80,20 @@ export function MatchRow({
     });
   }
 
+  function undoClick() {
+    if (!canUndo || pending) return;
+    if (!confirm("Opravdu vrátit poslední leg? Sázky na tento leg budou vráceny.")) return;
+    start(async () => {
+      const r = await undoLastLegAction(tournamentId, match.id);
+      if (r.ok) {
+        toast.success("Poslední leg vrácen — zadej správného vítěze");
+        router.refresh();
+      } else {
+        toast.error(r.error);
+      }
+    });
+  }
+
   function cancelClick() {
     if (!confirm("Opravdu zrušit zápas?")) return;
     start(async () => {
@@ -84,6 +106,47 @@ export function MatchRow({
       }
     });
   }
+
+  // Hotkey dispatch goes through a ref so the window listener is bound
+  // once while always seeing fresh state (liveLeg, pending, canUndo).
+  const hotkeyRef = useRef<(key: string) => void>(() => {});
+  const handleHotkey = (key: string) => {
+    if (pending) return;
+    if (key === "a" && liveLeg && match.playerA) {
+      recordWinner(match.playerA.id);
+    } else if (key === "l" && liveLeg && match.playerB) {
+      recordWinner(match.playerB.id);
+    } else if (key === "z" && canUndo) {
+      undoClick();
+    }
+  };
+  useEffect(() => {
+    hotkeyRef.current = handleHotkey;
+  });
+
+  useEffect(() => {
+    if (!hotkeys) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.defaultPrevented || e.repeat) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      if (
+        t &&
+        (t.tagName === "INPUT" ||
+          t.tagName === "TEXTAREA" ||
+          t.tagName === "SELECT" ||
+          t.isContentEditable)
+      ) {
+        return;
+      }
+      const key = e.key.toLowerCase();
+      if (key !== "a" && key !== "l" && key !== "z") return;
+      e.preventDefault();
+      hotkeyRef.current(key);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [hotkeys]);
 
   const nameA = match.playerA?.name ?? "?";
   const nameB = match.playerB?.name ?? "?";
@@ -146,12 +209,32 @@ export function MatchRow({
               </div>
             </div>
           ) : (
-            match.playerA &&
-            match.playerB && (
-              <Button disabled={pending} onClick={startLegClick}>
-                {match.legs.length === 0 ? "Spustit zápas (leg 1)" : `Spustit leg ${match.legs.length + 1}`}
-              </Button>
-            )
+            <div className="flex flex-wrap gap-2">
+              {match.playerA && match.playerB && (
+                <Button disabled={pending} onClick={startLegClick}>
+                  {match.legs.length === 0 ? "Spustit zápas (leg 1)" : `Spustit leg ${match.legs.length + 1}`}
+                </Button>
+              )}
+              {canUndo && (
+                <Button variant="outline" disabled={pending} onClick={undoClick}>
+                  Vrátit poslední leg
+                </Button>
+              )}
+            </div>
+          )}
+          {hotkeys && (
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <span>Klávesy:</span>
+              <span>
+                <kbd className="rounded border bg-muted px-1 font-mono">A</kbd> leg pro {nameA}
+              </span>
+              <span>
+                <kbd className="rounded border bg-muted px-1 font-mono">L</kbd> leg pro {nameB}
+              </span>
+              <span>
+                <kbd className="rounded border bg-muted px-1 font-mono">Z</kbd> vrátit poslední leg
+              </span>
+            </p>
           )}
         </div>
       )}

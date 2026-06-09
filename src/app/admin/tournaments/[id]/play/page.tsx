@@ -195,7 +195,7 @@ export default async function PlayPage({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <MatchRow tournamentId={id} match={focusedVm} number={focusedIndex + 1} />
+          <MatchRow tournamentId={id} match={focusedVm} number={focusedIndex + 1} hotkeys />
         </CardContent>
       </Card>
 

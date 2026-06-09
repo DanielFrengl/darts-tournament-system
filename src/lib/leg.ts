@@ -99,6 +99,53 @@ export class LegService {
     });
   }
 
+  /**
+   * Undo the most recently recorded leg of a LIVE match (mis-click fix).
+   * Rules:
+   *   - match must still be live (finished matches are too tangled to revert),
+   *   - no other leg may be running,
+   *   - the last leg must be finished with a winner.
+   * The leg row is REOPENED (status back to live, winner cleared) instead of
+   * deleted — deleting would cascade into its leg_winner market and fail on
+   * the bets→selections RESTRICT FK once anyone has bet. Reopening also lets
+   * the admin immediately re-record the correct winner.
+   */
+  async undoLastLeg(matchId: string): Promise<{ match: Match; leg: Leg }> {
+    return this.db.transaction(async (tx) => {
+      const [m] = await tx.select().from(matches).where(eq(matches.id, matchId)).for("update");
+      if (!m) throw new Error("match not found");
+      if (m.status !== "live") {
+        throw new Error("undo is only allowed while the match is live");
+      }
+      const matchLegs = await tx
+        .select()
+        .from(legs)
+        .where(eq(legs.matchId, matchId))
+        .orderBy(asc(legs.legNumber));
+      if (matchLegs.some((l) => l.status === "live")) {
+        throw new Error("cannot undo while a leg is live");
+      }
+      const last = matchLegs[matchLegs.length - 1];
+      if (!last || last.status !== "finished" || !last.winnerId) {
+        throw new Error("no finished leg to undo");
+      }
+      const newScoreA = last.winnerId === m.playerAId ? m.scoreA - 1 : m.scoreA;
+      const newScoreB = last.winnerId === m.playerBId ? m.scoreB - 1 : m.scoreB;
+      const [updatedLeg] = await tx
+        .update(legs)
+        .set({ status: "live", winnerId: null, finishedAt: null })
+        .where(eq(legs.id, last.id))
+        .returning();
+      const [updatedMatch] = await tx
+        .update(matches)
+        .set({ scoreA: Math.max(0, newScoreA), scoreB: Math.max(0, newScoreB) })
+        .where(eq(matches.id, m.id))
+        .returning();
+      if (!updatedLeg || !updatedMatch) throw new Error("failed to undo leg");
+      return { match: updatedMatch, leg: updatedLeg };
+    });
+  }
+
   async cancelMatch(matchId: string): Promise<void> {
     await this.db.transaction(async (tx) => {
       await tx
@@ -148,6 +195,23 @@ export async function startLegWithMarkets(matchId: string) {
   const leg = await legService.startLeg(matchId);
   await onLegStarted(leg.id, matchId, leg.legNumber);
   return leg;
+}
+
+/**
+ * Undo wrapper: revert the leg score (LegService), then void the leg's
+ * leg_winner market — payout clawback + stake refunds — and publish the
+ * same channels record-leg uses so all open UIs refresh.
+ */
+export async function undoLastLegWithMarkets(matchId: string) {
+  const { onLegUndone } = await import("@/lib/match-lifecycle");
+  const result = await legService.undoLastLeg(matchId);
+  await onLegUndone({
+    legId: result.leg.id,
+    matchId: result.match.id,
+    scoreA: result.match.scoreA,
+    scoreB: result.match.scoreB,
+  });
+  return result;
 }
 
 /**

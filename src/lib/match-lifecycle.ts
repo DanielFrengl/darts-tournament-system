@@ -1,6 +1,16 @@
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
-import { matches, players, tournaments } from "@/db/schema";
+import {
+  bets,
+  markets,
+  marketSelections,
+  matches,
+  parlays,
+  players,
+  tournaments,
+  transactions,
+  users,
+} from "@/db/schema";
 import { marketService } from "@/lib/market";
 import { bettingService } from "@/lib/betting";
 import { bracketService } from "@/lib/bracket";
@@ -148,6 +158,144 @@ export async function onLegFinished({
       });
       publish(`tournament:${m.tournamentId}`, "bracket_updated", { matchId });
     }
+  }
+}
+
+/**
+ * Called after an admin undoes the last recorded leg of a live match.
+ * Voids the leg's leg_winner market:
+ *   1. revert its settlement — claw back payouts of won single bets and
+ *      won parlays, reopen settled bets/parlays back to `open`,
+ *   2. refund all (now open) stakes via refundSelections,
+ *   3. mark the market `cancelled` (void — stays void even after the
+ *      reopened leg is re-recorded).
+ * Then publishes on the same channels record-leg uses so all UIs refresh.
+ */
+export async function onLegUndone({
+  legId,
+  matchId,
+  scoreA,
+  scoreB,
+}: {
+  legId: string;
+  matchId: string;
+  scoreA: number;
+  scoreB: number;
+}): Promise<void> {
+  const legMarkets = await db
+    .select()
+    .from(markets)
+    .where(and(eq(markets.legId, legId), eq(markets.type, "leg_winner")));
+
+  for (const market of legMarkets) {
+    if (market.status === "cancelled") continue;
+    const sels = await db
+      .select({ id: marketSelections.id })
+      .from(marketSelections)
+      .where(eq(marketSelections.marketId, market.id));
+    const selIds = sels.map((s) => s.id);
+
+    if (selIds.length > 0) {
+      // 1. Revert settlement: settled bets go back to `open`. Money only
+      // ever moved for won single bets and won/refunded parlays, so claw
+      // back exactly those payouts before refunding stakes.
+      const settledBets = await db
+        .select()
+        .from(bets)
+        .where(
+          and(
+            inArray(bets.selectionId, selIds),
+            inArray(bets.status, ["won", "lost"])
+          )
+        );
+      const parlayIds = new Set<string>();
+      for (const b of settledBets) {
+        if (!b.parlayId && b.status === "won" && b.payout) {
+          await clawbackPayout(
+            b.userId,
+            Number(b.payout),
+            "Vrácení legu — odebrání výhry"
+          );
+        }
+        if (b.parlayId) parlayIds.add(b.parlayId);
+        await db
+          .update(bets)
+          .set({ status: "open", payout: null, settledAt: null })
+          .where(eq(bets.id, b.id));
+      }
+      for (const parlayId of parlayIds) {
+        const [p] = await db.select().from(parlays).where(eq(parlays.id, parlayId));
+        if (!p) continue;
+        if (p.status === "won" && p.payout) {
+          await clawbackPayout(
+            p.userId,
+            Number(p.payout),
+            "Vrácení legu — odebrání výhry akumulátoru"
+          );
+        }
+        if (p.status === "won" || p.status === "lost") {
+          await db
+            .update(parlays)
+            .set({ status: "open", payout: null, settledAt: null })
+            .where(eq(parlays.id, parlayId));
+        }
+        // status refunded: stake already returned, leave it be.
+      }
+      await db
+        .update(marketSelections)
+        .set({ isWinner: null })
+        .where(inArray(marketSelections.id, selIds));
+
+      // 2. Refund all open stakes (incl. the just-reopened ones); reopened
+      // parlays resolve to `refunded` inside refundSelections.
+      await bettingService.refundSelections(selIds);
+    }
+
+    // 3. Void the market for good.
+    await db
+      .update(markets)
+      .set({ status: "cancelled" })
+      .where(eq(markets.id, market.id));
+  }
+
+  publish(`match:${matchId}`, "leg_undone", { legId, scoreA, scoreB });
+  const [m] = await db.select().from(matches).where(eq(matches.id, matchId));
+  if (m) {
+    publish(`tournament:${m.tournamentId}`, "standings_updated", { matchId });
+  }
+}
+
+/**
+ * Take a previously credited payout back. Intentionally allows the
+ * balance to go negative — the user already spent money they should
+ * never have received; blocking the undo over it would be worse.
+ */
+async function clawbackPayout(
+  userId: string,
+  amount: number,
+  note: string
+): Promise<void> {
+  if (!(amount > 0)) return;
+  const newBalance = await db.transaction(async (tx) => {
+    const [u] = await tx
+      .select({ capital: users.capital })
+      .from(users)
+      .where(eq(users.id, userId))
+      .for("update");
+    if (!u) return null;
+    const balance = (Number(u.capital) - amount).toFixed(2);
+    await tx.update(users).set({ capital: balance }).where(eq(users.id, userId));
+    await tx.insert(transactions).values({
+      userId,
+      type: "bet_refund",
+      amount: (-amount).toFixed(2),
+      balanceAfter: balance,
+      note,
+    });
+    return balance;
+  });
+  if (newBalance !== null) {
+    publish(`user:${userId}`, "capital_changed", { balance: newBalance });
   }
 }
 

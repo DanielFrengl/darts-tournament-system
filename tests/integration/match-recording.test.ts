@@ -97,6 +97,60 @@ describe("LegService", () => {
     await expect(legService.recordLeg(leg.id, a.id)).rejects.toThrow(/not live/i);
   });
 
+  it("undoLastLeg reverts the score and reopens the leg for re-recording", async () => {
+    const { match, players: [a, b] } = await setupMatch(5);
+    const leg1 = await legService.startLeg(match.id);
+    await legService.recordLeg(leg1.id, a.id);
+
+    const undone = await legService.undoLastLeg(match.id);
+    expect(undone.match.scoreA).toBe(0);
+    expect(undone.match.scoreB).toBe(0);
+    expect(undone.match.status).toBe("live");
+    expect(undone.leg.id).toBe(leg1.id);
+    expect(undone.leg.status).toBe("live");
+    expect(undone.leg.winnerId).toBeNull();
+
+    // Reopened leg accepts the corrected winner directly.
+    const r = await legService.recordLeg(leg1.id, b.id);
+    expect(r.match.scoreA).toBe(0);
+    expect(r.match.scoreB).toBe(1);
+  });
+
+  it("undoLastLeg only undoes the most recent leg", async () => {
+    const { match, players: [a, b] } = await setupMatch(5);
+    const leg1 = await legService.startLeg(match.id);
+    await legService.recordLeg(leg1.id, a.id);
+    const leg2 = await legService.startLeg(match.id);
+    await legService.recordLeg(leg2.id, b.id);
+
+    const undone = await legService.undoLastLeg(match.id);
+    expect(undone.leg.id).toBe(leg2.id);
+    expect(undone.match.scoreA).toBe(1);
+    expect(undone.match.scoreB).toBe(0);
+  });
+
+  it("undoLastLeg rejects while another leg is live", async () => {
+    const { match, players: [a] } = await setupMatch(5);
+    const leg1 = await legService.startLeg(match.id);
+    await legService.recordLeg(leg1.id, a.id);
+    await legService.startLeg(match.id);
+    await expect(legService.undoLastLeg(match.id)).rejects.toThrow(/leg is live/i);
+  });
+
+  it("undoLastLeg rejects on a finished match", async () => {
+    const { match, players: [a] } = await setupMatch(3);
+    const leg1 = await legService.startLeg(match.id);
+    await legService.recordLeg(leg1.id, a.id);
+    const leg2 = await legService.startLeg(match.id);
+    await legService.recordLeg(leg2.id, a.id); // match finished 2:0
+    await expect(legService.undoLastLeg(match.id)).rejects.toThrow(/live/i);
+  });
+
+  it("undoLastLeg rejects when the match has not started", async () => {
+    const { match } = await setupMatch();
+    await expect(legService.undoLastLeg(match.id)).rejects.toThrow(/live/i);
+  });
+
   it("cancelMatch marks match cancelled and finishes any live leg", async () => {
     const { match } = await setupMatch();
     await legService.startLeg(match.id);
