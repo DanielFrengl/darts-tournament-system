@@ -19,7 +19,13 @@ async function requireAdminId(explicit?: string): Promise<string | null> {
   return session.user.id;
 }
 
-async function requireDebugId(): Promise<string | null> {
+async function requireDebugId(explicit?: string): Promise<string | null> {
+  // Explicit caller id (tests/scripts) — resolve the role from the DB instead
+  // of auth(), which needs a request scope.
+  if (explicit) {
+    const [u] = await db.select({ role: users.role }).from(users).where(eq(users.id, explicit));
+    return u && isDebug(u.role) ? explicit : null;
+  }
   const session = await auth();
   if (!session?.user || !isDebug(session.user.role)) return null;
   return session.user.id;
@@ -55,7 +61,7 @@ export async function changeUserRole(
   const adminId = await requireAdminId(explicitAdminId);
   if (!adminId) return { ok: false, error: "Forbidden" };
   if (targetUserId === adminId) return { ok: false, error: "Cannot change your own role" };
-  const callerIsDebug = (await requireDebugId()) !== null;
+  const callerIsDebug = (await requireDebugId(explicitAdminId)) !== null;
   // Only a debug user can grant the debug role, or change the role of an
   // existing debug user. A regular admin must never touch the super-role.
   if (newRole === "debug" && !callerIsDebug) {
