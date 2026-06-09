@@ -179,7 +179,7 @@ async function buildBettingSurfaces(tournamentId: string): Promise<{
     } else {
       groupKey = "tournament";
       label = "Sázky na celý turnaj";
-      sublabel = "Futures";
+      sublabel = "Kdo vyhraje / skončí druhý / třetí";
       sortKey = 2;
       marketTitle = TOURNAMENT_MARKET_TITLES[m.type] ?? m.type;
     }

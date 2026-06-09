@@ -16,6 +16,7 @@ import { userStats } from "@/lib/user-stats";
 import { MatchListCard } from "@/components/tournament/MatchListCard";
 import { TournamentLiveSync } from "@/components/tournament/TournamentLiveSync";
 import { LiveDot } from "@/components/ui/live-dot";
+import { HowItWorks } from "@/components/layout/HowItWorks";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -111,6 +112,9 @@ export default async function DashboardPage() {
         <StatusBadge kind="tournament" status={t.status} />
       </PageHeader>
       {stats}
+      {Number(openBets) === 0 && settledCount === 0 && (
+        <HowItWorks startingCapital={t.configJson.startingCapital} />
+      )}
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <Card className="lg:order-1">
           <CardHeader className="flex flex-row items-center justify-between">

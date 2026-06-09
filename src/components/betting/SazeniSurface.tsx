@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Layers, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { OddsHint } from "@/components/betting/OddsHint";
 import { BetBuilder, type BuilderGroupVM } from "./BetBuilder";
 import { MarketCard, type MarketCardVM } from "./MarketCard";
 
@@ -35,8 +36,8 @@ export function SazeniSurface({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
           {mode === "single"
-            ? "Klikni na kurz pro jednoduchou sázku."
-            : "Vyber 2+ výběry z různých zápasů a sklouzni je do akumulátoru."}
+            ? "Klikni na hráče, kterého tipuješ, a vsaď."
+            : "Vyber 2+ tipy z různých zápasů a zkombinuj je do jedné sázky s vyšší výhrou."}
         </p>
         <div className="inline-flex rounded-md border bg-card shadow-sm">
           <Button
@@ -47,7 +48,7 @@ export function SazeniSurface({
             className="rounded-r-none"
           >
             <Zap className="mr-1 h-4 w-4" />
-            Jednoduchá
+            Jedna sázka
           </Button>
           <Button
             type="button"
@@ -57,10 +58,12 @@ export function SazeniSurface({
             className="rounded-l-none"
           >
             <Layers className="mr-1 h-4 w-4" />
-            Bet builder
+            Akumulátor
           </Button>
         </div>
       </div>
+
+      <OddsHint />
 
       {mode === "single" ? (
         <SingleBetView
@@ -92,7 +95,7 @@ function SingleBetView({
     return (
       <Card>
         <CardContent className="pt-6 text-sm text-muted-foreground">
-          Žádné otevřené trhy.
+          Právě teď není na co sázet. Jakmile začne zápas, objeví se tu kurzy.
         </CardContent>
       </Card>
     );

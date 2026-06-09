@@ -230,6 +230,10 @@ function LeaderboardTable({ rows }: { rows: FullRow[] }) {
           )}
         </TableBody>
       </Table>
+      <p className="text-xs text-muted-foreground">
+        Úspěšnost = podíl vyhraných sázek · Obrat = celkem vsazeno · ROI =
+        návratnost (zisk ku vsazenému) · Zisk = výhry minus vklady
+      </p>
     </div>
   );
 }

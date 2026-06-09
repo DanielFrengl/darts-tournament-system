@@ -163,7 +163,7 @@ export function MatchListCard({
                 href={`/match/${match.id}`}
                 className="flex items-center gap-1 hover:text-foreground"
               >
-                Více trhů
+                Další sázky
                 <ArrowRight className="h-3 w-3" />
               </Link>
             </div>

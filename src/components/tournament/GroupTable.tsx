@@ -64,6 +64,10 @@ export function GroupTable({
           ))}
         </TableBody>
       </Table>
+      <p className="text-xs text-muted-foreground">
+        Z = zápasy · V = výhry · P = prohry · Legy = vyhrané : prohrané ·
+        Body = za výhru &nbsp;<span className="align-middle"><Badge variant="default" className="px-1 py-0">→</Badge></span>&nbsp; postupuje dál
+      </p>
     </div>
   );
 }

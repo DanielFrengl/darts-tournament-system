@@ -139,7 +139,7 @@ export default async function MatchDetailPage({
         <div className="flex items-center gap-2">
           <Badge variant="outline">{phaseLabel}</Badge>
           <StatusBadge kind="match" status={match.status} />
-          <span className="text-sm text-muted-foreground">best of {match.bestOf}</span>
+          <span className="text-sm text-muted-foreground">{formatLegs(match.bestOf)}</span>
         </div>
         <h1 className="text-2xl font-semibold">
           {nameA} <span className="font-mono">{match.scoreA} : {match.scoreB}</span> {nameB}
@@ -161,8 +161,8 @@ export default async function MatchDetailPage({
         <div className="space-y-8">
           {match.status === "live" && live.length > 0 && (
             <Section
-              title="Live: jednotlivé legy"
-              subtitle="Sázej na vítěze každého rozjetého legu"
+              title="Sázky na jednotlivé legy"
+              subtitle="Tipni vítěze každého rozehraného legu"
             >
               <div className="grid gap-4 md:grid-cols-2">
                 {live.map((vm) => (
@@ -179,7 +179,7 @@ export default async function MatchDetailPage({
             </Section>
           )}
           {primary.length > 0 && (
-            <Section title="Hlavní trh" subtitle="Kdo vyhraje zápas">
+            <Section title="Kdo vyhraje zápas" subtitle="Hlavní sázka">
               <div className="grid gap-4 md:grid-cols-2">
                 {primary.map((vm) => (
                   <MarketCard
@@ -195,7 +195,7 @@ export default async function MatchDetailPage({
             </Section>
           )}
           {secondary.length > 0 && (
-            <Section title="Vedlejší trhy" subtitle="Přesný výsledek">
+            <Section title="Přesný výsledek" subtitle="Tipni přesné skóre zápasu">
               <div className="grid gap-4 md:grid-cols-2">
                 {secondary.map((vm) => (
                   <MarketCard
@@ -212,8 +212,8 @@ export default async function MatchDetailPage({
           )}
           {match.status !== "live" && live.length > 0 && (
             <Section
-              title="Live: jednotlivé legy"
-              subtitle="Sázej na vítěze každého rozjetého legu"
+              title="Sázky na jednotlivé legy"
+              subtitle="Tipni vítěze každého rozehraného legu"
             >
               <div className="grid gap-4 md:grid-cols-2">
                 {live.map((vm) => (
@@ -257,6 +257,13 @@ function Section({
       {children}
     </section>
   );
+}
+
+// "best of N" in darts means first to a majority of N legs. For casual users
+// we show the leg count in Czech instead of the English "best of N".
+function formatLegs(bestOf: number): string {
+  const word = bestOf === 1 ? "leg" : bestOf >= 2 && bestOf <= 4 ? "legy" : "legů";
+  return `na ${bestOf} ${word}`;
 }
 
 function labelPhase(phase: string): string {
