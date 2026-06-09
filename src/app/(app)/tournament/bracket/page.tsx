@@ -4,6 +4,7 @@ import { tournamentService } from "@/lib/tournament";
 import { buildBracketMatches } from "@/lib/tournament-views";
 import { BracketView } from "@/components/tournament/BracketView";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { TournamentLiveSync } from "@/components/tournament/TournamentLiveSync";
 
 export default async function FullBracketPage() {
   const t = await tournamentService.getActive();
@@ -14,6 +15,7 @@ export default async function FullBracketPage() {
 
   return (
     <div className="space-y-6">
+      <TournamentLiveSync tournamentId={t.id} />
       <PageHeader
         title={`${t.name} — Pavouk`}
         actions={

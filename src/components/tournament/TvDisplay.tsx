@@ -37,8 +37,10 @@ export function TvDisplay({
 }) {
   const router = useRouter();
   useLive([`tournament:${tournamentId}`], () => router.refresh());
+  // Safety-net fallback only — SSE handles live updates; this catches
+  // missed events (e.g. after a dropped connection).
   useEffect(() => {
-    const i = setInterval(() => router.refresh(), 60_000);
+    const i = setInterval(() => router.refresh(), 300_000);
     return () => clearInterval(i);
   }, [router]);
 
