@@ -5,7 +5,7 @@ import * as schema from "@/db/schema";
 import { sql } from "drizzle-orm";
 
 const TEST_DB_URL =
-  process.env.TEST_DATABASE_URL ?? "postgres://darts:darts@localhost:5432/darts_test";
+  process.env.TEST_DATABASE_URL ?? "postgres://darts:darts@localhost:5434/darts_test";
 
 const client = postgres(TEST_DB_URL, { max: 1 });
 export const testDb = drizzle(client, { schema });
