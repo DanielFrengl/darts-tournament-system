@@ -27,11 +27,14 @@ export interface SimResult {
   reachProb: Record<string, number[]>;
   // distribution over buckets [champion, finalist, semifinalist, quarterfinalist, group]
   placeDist: Record<string, number[]>;
+  // running win-probability estimate for the top favorites, sampled over the run
+  convergence: { id: string; name: string; series: number[] }[];
 }
 
 export interface SimOptions {
   runs?: number;
   rng?: () => number;
+  convergenceTop?: number;
 }
 
 export function simulateTournament(
@@ -55,6 +58,10 @@ export function simulateTournament(
     place[p.id] = [0, 0, 0, 0, 0];
   }
 
+  const samples: Record<string, number[]> = {};
+  for (const p of players) samples[p.id] = [];
+  const sampleEvery = Math.max(1, Math.floor(runs / 120));
+
   for (let r = 0; r < runs; r++) {
     const out = simulateOnce(players, cfg, rng);
     win[out.champion] = (win[out.champion] ?? 0) + 1;
@@ -68,7 +75,17 @@ export function simulateTournament(
       const bk = out.bucket[p.id] ?? 4;
       pl[bk] = (pl[bk] ?? 0) + 1;
     }
+    if ((r + 1) % sampleEvery === 0 || r + 1 === runs) {
+      for (const p of players) samples[p.id]!.push((win[p.id] ?? 0) / (r + 1));
+    }
   }
+
+  const topN = opts.convergenceTop ?? 3;
+  const convergence = players
+    .slice()
+    .sort((a, b) => (win[b.id] ?? 0) - (win[a.id] ?? 0))
+    .slice(0, topN)
+    .map((p) => ({ id: p.id, name: p.name, series: samples[p.id]! }));
 
   const norm = (m: Record<string, number>) => {
     const o: Record<string, number> = {};
@@ -88,6 +105,7 @@ export function simulateTournament(
     thirdProb: norm(third),
     reachProb: normArr(reach),
     placeDist: normArr(place),
+    convergence,
   };
 }
 

@@ -65,4 +65,16 @@ describe("simulateTournament", () => {
     });
     expect(res.reachProb["p0"]![4]).toBeCloseTo(res.winProb["p0"]!, 10);
   });
+
+  it("reports convergence series whose tail approaches winProb", () => {
+    const res = simulateTournament(players([1800, 1500, 1500, 1200]), cfg, {
+      runs: 3000,
+      rng: seeded(9),
+    });
+    expect(res.convergence.length).toBeGreaterThan(0);
+    const top = res.convergence[0]!;
+    expect(top.series.length).toBeGreaterThan(0);
+    const last = top.series[top.series.length - 1]!;
+    expect(last).toBeCloseTo(res.winProb[top.id]!, 5);
+  });
 });
