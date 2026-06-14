@@ -145,6 +145,17 @@ export default async function InfoPage() {
             mít na konci turnaje nejvíc jablek. Stav sledujete v žebříčku
             sázkařů.
           </p>
+          <figure className="mt-4 flex flex-col items-center gap-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/trofej.jpg"
+              alt="Sázkařská trofej Jabloňová Open – stříbrné jablko s šipkou"
+              className="w-full max-w-xs rounded-xl border object-cover"
+            />
+            <figcaption className="text-xs text-muted-foreground">
+              Děkujeme Tomáši Frenglovi za tisk a design trofeje.
+            </figcaption>
+          </figure>
         </section>
 
         {/* Bug reports */}
