@@ -12,6 +12,7 @@ export default async function AdminCompetitorsPage() {
       id: competitors.id,
       displayName: competitors.displayName,
       eloRating: competitors.eloRating,
+      eloLocked: competitors.eloLocked,
       userId: competitors.userId,
       linkedUsername: users.username,
     })

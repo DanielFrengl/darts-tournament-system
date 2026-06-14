@@ -14,6 +14,8 @@ import {
   addNewcomer,
   finalizeTournamentRatings,
   linkCompetitorToUser,
+  setCompetitorElo,
+  unlockCompetitorElo,
 } from "@/lib/competitor";
 
 beforeAll(setupTestDb);
@@ -105,5 +107,27 @@ describe("competitor seeding", () => {
     const [p2] = await testDb.select().from(players).where(eq(players.id, p!.id));
     expect(c2!.userId).toBe(u!.id);
     expect(p2!.userId).toBe(u!.id);
+  });
+
+  it("sets and locks elo, then unlocks", async () => {
+    const [c] = await testDb
+      .insert(competitors)
+      .values({ displayName: "X", eloRating: 1500 })
+      .returning();
+
+    await setCompetitorElo(testDb, c!.id, 1700);
+    let [r] = await testDb
+      .select()
+      .from(competitors)
+      .where(eq(competitors.id, c!.id));
+    expect(r!.eloRating).toBe(1700);
+    expect(r!.eloLocked).toBe(true);
+
+    await unlockCompetitorElo(testDb, c!.id);
+    [r] = await testDb
+      .select()
+      .from(competitors)
+      .where(eq(competitors.id, c!.id));
+    expect(r!.eloLocked).toBe(false);
   });
 });

@@ -82,6 +82,29 @@ export async function linkCompetitorToUser(
 }
 
 /**
+ * Manually set a competitor's Elo and lock it so future imports/recomputes
+ * won't overwrite the value.
+ */
+export async function setCompetitorElo(
+  db: DB,
+  competitorId: string,
+  elo: number
+) {
+  await db
+    .update(competitors)
+    .set({ eloRating: elo, eloLocked: true })
+    .where(eq(competitors.id, competitorId));
+}
+
+/** Clear the lock so the next import recomputes this competitor's Elo. */
+export async function unlockCompetitorElo(db: DB, competitorId: string) {
+  await db
+    .update(competitors)
+    .set({ eloLocked: false })
+    .where(eq(competitors.id, competitorId));
+}
+
+/**
  * Copy each player's final working elo back onto its linked competitor.
  * Call when a tournament transitions to `finished` so the carried rating
  * reflects the latest results.

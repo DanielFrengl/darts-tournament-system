@@ -6,7 +6,11 @@ import { db } from "@/db/client";
 import { markets, marketSelections } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { isAdmin } from "@/lib/roles";
-import { linkCompetitorToUser } from "@/lib/competitor";
+import {
+  linkCompetitorToUser,
+  setCompetitorElo,
+  unlockCompetitorElo,
+} from "@/lib/competitor";
 import { marketService } from "@/lib/market";
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -23,6 +27,26 @@ export async function linkAction(formData: FormData): Promise<Result> {
   if (!competitorId || !userId)
     return { ok: false, error: "Chybí hráč nebo uživatel" };
   await linkCompetitorToUser(db, competitorId, userId);
+  revalidatePath("/admin/competitors");
+  return { ok: true };
+}
+
+export async function setEloAction(formData: FormData): Promise<Result> {
+  if (!(await ensureAdmin())) return { ok: false, error: "Nedostatečná práva" };
+  const competitorId = String(formData.get("competitorId") ?? "");
+  const elo = Number(formData.get("elo"));
+  if (!competitorId || !Number.isFinite(elo) || elo < 0 || elo > 4000)
+    return { ok: false, error: "Neplatné Elo (0–4000)" };
+  await setCompetitorElo(db, competitorId, Math.round(elo));
+  revalidatePath("/admin/competitors");
+  return { ok: true };
+}
+
+export async function unlockEloAction(formData: FormData): Promise<Result> {
+  if (!(await ensureAdmin())) return { ok: false, error: "Nedostatečná práva" };
+  const competitorId = String(formData.get("competitorId") ?? "");
+  if (!competitorId) return { ok: false, error: "Chybí hráč" };
+  await unlockCompetitorElo(db, competitorId);
   revalidatePath("/admin/competitors");
   return { ok: true };
 }
