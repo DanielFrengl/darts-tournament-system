@@ -182,7 +182,7 @@ export default async function DashboardPage() {
                       <span
                         className={`font-mono text-sm font-semibold tabular-nums ${
                           row.netProfit > 0
-                            ? "text-emerald-400"
+                            ? "text-emerald-500"
                             : row.netProfit < 0
                               ? "text-destructive"
                               : ""

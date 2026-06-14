@@ -5,13 +5,28 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { LiveDot } from "@/components/ui/live-dot";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   startLegAction,
   recordLegAction,
   cancelMatchAction,
   undoLastLegAction,
 } from "@/app/admin/tournaments/[id]/matches/actions";
+
+// Localized labels so the admin runner matches the Czech UI used everywhere
+// else instead of leaking raw English enum values (group/scheduled/pending).
+const PHASE_LABEL: Record<string, string> = {
+  group: "Skupina",
+  quarter: "Čtvrtfinále",
+  semi: "Semifinále",
+  third_place: "O 3. místo",
+  final: "Finále",
+};
+const LEG_STATUS_LABEL: Record<Leg["status"], string> = {
+  pending: "čeká",
+  live: "běží",
+  finished: "hotovo",
+};
 
 type Player = { id: string; name: string };
 type Leg = {
@@ -162,14 +177,8 @@ export function MatchRow({
               #{number}
             </span>
           )}
-          <Badge variant="outline">{match.phase}</Badge>
-          <Badge
-            variant={isLive ? "default" : "secondary"}
-            className={isLive ? "flex items-center gap-1.5" : undefined}
-          >
-            {isLive && <LiveDot size="sm" />}
-            {match.status}
-          </Badge>
+          <Badge variant="outline">{PHASE_LABEL[match.phase] ?? match.phase}</Badge>
+          <StatusBadge kind="match" status={match.status} />
           <span className="text-muted-foreground">best of {match.bestOf}</span>
         </div>
         {!isFinished && match.status !== "cancelled" && (
@@ -242,7 +251,7 @@ export function MatchRow({
         <ol className="space-y-1 text-xs text-muted-foreground">
           {match.legs.map((l) => (
             <li key={l.id}>
-              Leg {l.legNumber}: {l.status}
+              Leg {l.legNumber}: {LEG_STATUS_LABEL[l.status] ?? l.status}
               {l.winnerId && ` → ${l.winnerId === match.playerA?.id ? nameA : nameB}`}
             </li>
           ))}
