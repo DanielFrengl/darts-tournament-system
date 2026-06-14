@@ -114,6 +114,11 @@ export function SystemSettingsForm({
           <div className="space-y-2">
             <UploadButton
               endpoint="logo"
+              appearance={{
+                button:
+                  "bg-primary text-primary-foreground rounded-md px-4 text-sm font-medium",
+                allowedContent: "text-muted-foreground",
+              }}
               onClientUploadComplete={async (res) => {
                 const uploaded = res[0];
                 if (!uploaded) return;
