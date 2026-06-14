@@ -35,7 +35,7 @@ export default async function InfoPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-10 sm:py-14">
-      <header className="mb-8 flex flex-col items-center gap-3 text-center">
+      <header className="mb-8 flex flex-col gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={settings.logoUrl}
@@ -107,9 +107,7 @@ export default async function InfoPage() {
             {RATINGS.map((r, i) => (
               <li
                 key={r.name}
-                className={`flex items-center justify-between px-4 py-2 text-sm ${
-                  i < 3 ? "bg-amber-500/5" : ""
-                }`}
+                className="flex items-center justify-between px-4 py-2 text-sm"
               >
                 <span className="flex items-center gap-3">
                   <span className="w-6 text-right tabular-nums text-muted-foreground">
@@ -180,7 +178,7 @@ export default async function InfoPage() {
         </section>
       </article>
 
-      <p className="mt-8 text-center text-lg font-medium">
+      <p className="mt-8 text-lg font-medium">
         Dotazy a návrhy na vylepšení si nechte na zítra, ještě vám to na místě
         celé vysvětlím. Uvidíme se zítra! – Daniel Frengl
       </p>
