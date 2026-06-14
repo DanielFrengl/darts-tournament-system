@@ -167,12 +167,12 @@ export default async function InfoPage() {
             Když na něco narazíte, dejte nám vědět. Přímo v appce přibude
             tlačítko „Nahlásit chybu“, nebo mi napište na IG{" "}
             <a
-              href="https://instagram.com/danielfrengl"
+              href="https://instagram.com/daniel.frengl"
               target="_blank"
               rel="noreferrer"
               className="underline hover:text-foreground"
             >
-              @danielfrengl
+              @daniel.frengl
             </a>
             .
           </p>
