@@ -153,7 +153,7 @@ export default async function InfoPage() {
         </p>
       </section>
 
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-center text-lg font-medium text-foreground">
         Dotazy a návrhy na vylepšení si nechte na zítra, ještě vám to na místě
         celé vysvětlím. Uvidíme se zítra! – Daniel
       </p>
