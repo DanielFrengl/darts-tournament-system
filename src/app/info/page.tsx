@@ -182,7 +182,7 @@ export default async function InfoPage() {
 
       <p className="mt-8 text-center text-lg font-medium">
         Dotazy a návrhy na vylepšení si nechte na zítra, ještě vám to na místě
-        celé vysvětlím. Uvidíme se zítra! – Daniel
+        celé vysvětlím. Uvidíme se zítra! – Daniel Frengl
       </p>
     </main>
   );
