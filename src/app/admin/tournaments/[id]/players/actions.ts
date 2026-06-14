@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
+import { db } from "@/db/client";
 import { playerService } from "@/lib/player";
+import { addPlayerFromCompetitor, addNewcomer } from "@/lib/competitor";
 import { isAdmin } from "@/lib/roles";
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -31,6 +33,37 @@ export async function addPlayerFromUser(
   if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
   try {
     await playerService.addFromUser(tournamentId, userId);
+    revalidatePath(`/admin/tournaments/${tournamentId}/players`);
+    revalidatePath(`/admin/tournaments/${tournamentId}`);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
+export async function addFromCompetitorAction(
+  tournamentId: string,
+  competitorId: string
+): Promise<Result> {
+  if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
+  try {
+    await addPlayerFromCompetitor(db, tournamentId, competitorId);
+    revalidatePath(`/admin/tournaments/${tournamentId}/players`);
+    revalidatePath(`/admin/tournaments/${tournamentId}`);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
+export async function addNewcomerAction(
+  tournamentId: string,
+  name: string
+): Promise<Result> {
+  if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
+  if (!name.trim()) return { ok: false, error: "Jméno je povinné" };
+  try {
+    await addNewcomer(db, tournamentId, name.trim());
     revalidatePath(`/admin/tournaments/${tournamentId}/players`);
     revalidatePath(`/admin/tournaments/${tournamentId}`);
     return { ok: true };

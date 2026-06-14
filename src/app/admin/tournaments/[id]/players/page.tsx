@@ -1,12 +1,13 @@
 import { notFound } from "next/navigation";
-import { asc, eq, inArray, notInArray } from "drizzle-orm";
+import { asc, desc, eq, inArray, notInArray } from "drizzle-orm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { db } from "@/db/client";
-import { players, users } from "@/db/schema";
+import { players, users, competitors } from "@/db/schema";
 import { tournamentService } from "@/lib/tournament";
 import { playerService } from "@/lib/player";
 import { PlayerManager } from "@/components/admin/PlayerManager";
+import { RosterFromCompetitor } from "@/components/admin/RosterFromCompetitor";
 import { WizardNav } from "@/components/admin/WizardNav";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { displayName } from "@/lib/names";
@@ -52,6 +53,28 @@ export default async function PlayersPage({
           .from(users)
           .orderBy(asc(users.username));
   void inArray;
+
+  const takenCompetitorIds = new Set(
+    (
+      await db
+        .select({ cid: players.competitorId })
+        .from(players)
+        .where(eq(players.tournamentId, id))
+    )
+      .map((r) => r.cid)
+      .filter((x): x is string => !!x)
+  );
+  const availableCompetitors = (
+    await db
+      .select({
+        id: competitors.id,
+        name: competitors.displayName,
+        elo: competitors.eloRating,
+      })
+      .from(competitors)
+      .orderBy(desc(competitors.eloRating))
+  ).filter((c) => !takenCompetitorIds.has(c.id));
+
   const availableUsers = availableUserRows.map((u) => ({
     id: u.id,
     username: u.username,
@@ -124,6 +147,17 @@ export default async function PlayersPage({
             availableUsers={availableUsers}
             editable={editable}
           />
+          {editable && (
+            <div className="mt-4 border-t pt-4">
+              <p className="mb-2 text-sm font-medium">
+                Přidat z databáze hráčů (se zděděným Elem) nebo nováčka
+              </p>
+              <RosterFromCompetitor
+                tournamentId={id}
+                competitors={availableCompetitors}
+              />
+            </div>
+          )}
           {!editable && (
             <p className="mt-3 text-sm text-muted-foreground">
               Turnaj už není v draft fázi — úpravy hráčů jsou uzamčeny.
