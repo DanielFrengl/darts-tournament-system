@@ -1,9 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getAppSettings } from "@/lib/settings";
+import { CopyCode } from "@/components/info/CopyCode";
 
 export const metadata: Metadata = {
-  title: "Info — Jabloňová Open #4",
+  title: "Info: Jabloňová Open #4",
   description:
     "Čtvrtá Jabloňová Open je už zítra v 18:00. Nová sázkařská aplikace, kurzy, trofej pro nejlepšího sázkaře.",
   robots: { index: false, follow: false },
@@ -58,7 +59,9 @@ export default async function InfoPage() {
           <div className="mt-4 flex flex-col items-start gap-3 rounded-xl bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-sm">
               <span className="text-muted-foreground">Zvací kód</span>
-              <div className="font-mono text-lg font-semibold">jablonova69</div>
+              <div className="mt-1">
+                <CopyCode code="jablonova69" />
+              </div>
             </div>
             <Link
               href="/register"
@@ -139,7 +142,7 @@ export default async function InfoPage() {
         <section className="px-6 py-7 sm:px-8">
           <SectionTitle>2. Sázkařská trofej</SectionTitle>
           <p className="mt-2 text-sm text-muted-foreground">
-            Hraje se i o trofej pro nejlepšího sázkaře – získá ji ten, kdo bude
+            Hraje se i o trofej pro nejlepšího sázkaře. Získá ji ten, kdo bude
             mít na konci turnaje nejvíc jablek. Stav sledujete v žebříčku
             sázkařů.
           </p>
@@ -147,7 +150,7 @@ export default async function InfoPage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/trofej.jpg"
-              alt="Sázkařská trofej Jabloňová Open – stříbrné jablko s šipkou"
+              alt="Sázkařská trofej Jabloňová Open, stříbrné jablko s šipkou"
               className="w-full max-w-xs rounded-xl border object-cover"
             />
             <figcaption className="text-xs text-muted-foreground">
@@ -161,7 +164,7 @@ export default async function InfoPage() {
           <SectionTitle>Našli jste chybu?</SectionTitle>
           <p className="mt-2 text-sm text-muted-foreground">
             Appka je zatím prototyp a budeme ji průběžně vylepšovat a doplňovat.
-            Když na něco narazíte, dejte nám vědět – přímo v appce přibude
+            Když na něco narazíte, dejte nám vědět. Přímo v appce přibude
             tlačítko „Nahlásit chybu“, nebo nám napište.
           </p>
         </section>
@@ -172,7 +175,7 @@ export default async function InfoPage() {
           <p className="mt-2 text-sm text-muted-foreground">
             Po včerejší diskuzi s Filipem jsme si říkali, že by bylo docela cool
             ještě postavit program na zachytávání samotných hodů, což by pomohlo
-            udělat kurzy a predikce ještě přesnější – tak uvidíme, jestli se
+            udělat kurzy a predikce ještě přesnější. Tak uvidíme, jestli se
             k tomu dostaneme.
           </p>
         </section>
@@ -180,7 +183,9 @@ export default async function InfoPage() {
 
       <p className="mt-8 text-lg font-medium">
         Dotazy a návrhy na vylepšení si nechte na zítra, ještě vám to na místě
-        celé vysvětlím. Uvidíme se zítra! – Daniel Frengl
+        celé vysvětlím. Uvidíme se zítra!
+        <br />
+        Daniel Frengl
       </p>
     </main>
   );
