@@ -1,6 +1,6 @@
 {
   "tournamentName": "Jabloňová Open #1",
   "legs": "2,3,3,5",
-  "groups": "Honza,Bohy,Volkie,Dan,David,Matyáš,Radim,Adam,Alina",
-  "scores": "Adam-Alina=2:1|Honza-Bohy=2:1|Volkie-Dan=2:1|David-Matyáš=2:0|Radim-Alina=2:1|Honza-Volkie=2:1|Radim-David=3:2|Honza-Radim=5:3|David-Volkie=3:0"
+  "groups": "Honza,Bohy,Volkie,Dan,David,Matyáš,Radim,Singl,Alina",
+  "scores": "Singl-Alina=2:1|Honza-Bohy=2:1|Volkie-Dan=2:1|David-Matyáš=2:0|Radim-Alina=2:1|Honza-Volkie=2:1|Radim-David=3:2|Honza-Radim=5:3|David-Volkie=3:0"
 }
