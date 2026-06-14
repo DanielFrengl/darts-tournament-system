@@ -8,6 +8,7 @@ import {
   numeric,
   integer,
   jsonb,
+  boolean,
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
@@ -164,6 +165,7 @@ export const competitors = pgTable("competitors", {
   id: uuid("id").primaryKey().defaultRandom(),
   displayName: varchar("display_name", { length: 80 }).notNull(),
   eloRating: integer("elo_rating").notNull().default(1500),
+  eloLocked: boolean("elo_locked").notNull().default(false),
   userId: uuid("user_id")
     .references(() => users.id, { onDelete: "set null" })
     .unique(),

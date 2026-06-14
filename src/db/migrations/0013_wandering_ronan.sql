@@ -1,0 +1,1 @@
+ALTER TABLE "competitors" ADD COLUMN "elo_locked" boolean DEFAULT false NOT NULL;
