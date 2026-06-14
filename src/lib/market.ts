@@ -19,6 +19,7 @@ import {
   probabilityToOdds,
 } from "@/lib/odds";
 import type { TournamentConfig } from "@/lib/tournament-config";
+import { simulateTournament, type SimConfig } from "@/lib/tournament-sim";
 import { publish } from "@/lib/event-bus";
 
 type SelectionDraft = {
@@ -209,6 +210,12 @@ export class MarketService {
     if (!t) return;
     const cfg = t.configJson as TournamentConfig;
 
+    const sim = simulateTournament(
+      tPlayers.map((p) => ({ id: p.id, name: p.name, eloRating: p.eloRating })),
+      toSimConfig(cfg),
+      { runs: 10000 }
+    );
+
     await this.insertMarket(
       {
         tournamentId,
@@ -221,7 +228,7 @@ export class MarketService {
         playerId: p.id,
         scoreA: null,
         scoreB: null,
-        probability: 1 / tPlayers.length,
+        probability: clampProb(sim.winProb[p.id], tPlayers.length),
       })),
       cfg
     );
@@ -257,7 +264,15 @@ export class MarketService {
     if (cfg.thirdPlaceMatch && !existingTypes.has("tournament_third"))
       placeMarkets.push({ type: "tournament_third" });
 
+    const sim = simulateTournament(
+      tPlayers.map((p) => ({ id: p.id, name: p.name, eloRating: p.eloRating })),
+      toSimConfig(cfg),
+      { runs: 10000 }
+    );
+
     for (const { type } of placeMarkets) {
+      const probMap =
+        type === "tournament_runner_up" ? sim.runnerUpProb : sim.thirdProb;
       await this.insertMarket(
         {
           tournamentId,
@@ -270,7 +285,7 @@ export class MarketService {
           playerId: p.id,
           scoreA: null,
           scoreB: null,
-          probability: 1 / tPlayers.length,
+          probability: clampProb(probMap[p.id], tPlayers.length),
         })),
         cfg
       );
@@ -587,6 +602,25 @@ function binom(n: number, k: number): number {
   let acc = 1;
   for (let i = 1; i <= k; i++) acc = (acc * (n - k + i)) / i;
   return acc;
+}
+
+function toSimConfig(cfg: TournamentConfig): SimConfig {
+  return {
+    groupCount: cfg.groupCount,
+    groupSize: cfg.groupSize,
+    advancePerGroup: cfg.advancePerGroup,
+    bestOfGroup: cfg.bestOfGroup,
+    bestOfQuarter: cfg.bestOfQuarter,
+    bestOfSemi: cfg.bestOfSemi,
+    bestOfFinal: cfg.bestOfFinal,
+    thirdPlaceMatch: cfg.thirdPlaceMatch,
+  };
+}
+
+// never feed 0 to probabilityToOdds; floor at a small epsilon relative to field size
+function clampProb(p: number | undefined, fieldSize: number): number {
+  const floor = 1 / (fieldSize * 50);
+  return Math.min(0.999, Math.max(floor, p ?? 1 / fieldSize));
 }
 
 import { db } from "@/db/client";

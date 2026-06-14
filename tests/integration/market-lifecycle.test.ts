@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import { eq } from "drizzle-orm";
 import { setupTestDb, truncateAll, teardownTestDb, testDb } from "../setup/db";
-import { matches, markets, marketSelections, legs } from "@/db/schema";
+import { matches, markets, marketSelections, legs, players } from "@/db/schema";
 import { TournamentService } from "@/lib/tournament";
 import { PlayerService } from "@/lib/player";
 import { defaultTournamentConfig } from "@/lib/tournament-config";
@@ -125,5 +125,38 @@ describe("MarketService", () => {
     expect(ids.length).toBeGreaterThan(0);
     const ms = await marketService.listByMatch(match.id);
     expect(ms.every((m) => m.status === "cancelled")).toBe(true);
+  });
+
+  it("tournament winner odds favor the higher-rated player", async () => {
+    const t = await tournamentService.create({
+      name: "Sim",
+      config: defaultTournamentConfig(),
+    });
+    const ratings = [1800, 1500, 1500, 1200];
+    const ids: string[] = [];
+    for (let i = 0; i < ratings.length; i++) {
+      const p = await playerService.add(t.id, `P${i}`);
+      await testDb
+        .update(players)
+        .set({ eloRating: ratings[i]! })
+        .where(eq(players.id, p.id));
+      ids.push(p.id);
+    }
+
+    await marketService.createTournamentWinner(t.id);
+
+    const [market] = await testDb
+      .select()
+      .from(markets)
+      .where(eq(markets.tournamentId, t.id));
+    const sels = await testDb
+      .select()
+      .from(marketSelections)
+      .where(eq(marketSelections.marketId, market!.id));
+
+    const strong = sels.find((s) => s.playerId === ids[0])!;
+    const weak = sels.find((s) => s.playerId === ids[3])!;
+    // higher win probability => shorter (smaller) odds
+    expect(Number(strong.finalOdds)).toBeLessThan(Number(weak.finalOdds));
   });
 });
