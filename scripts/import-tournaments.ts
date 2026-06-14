@@ -132,10 +132,19 @@ async function main() {
     );
     const finalRatings = replayElo(allNames, replayMatches);
     for (const name of allNames) {
+      const id = compId[name]!;
+      const [c] = await db
+        .select({ locked: schema.competitors.eloLocked })
+        .from(schema.competitors)
+        .where(eq(schema.competitors.id, id));
+      if (c?.locked) {
+        console.log(`• "${name}" je zamčený — rating ponechán`);
+        continue;
+      }
       await db
         .update(schema.competitors)
         .set({ eloRating: Math.round(finalRatings[name] ?? 1500) })
-        .where(eq(schema.competitors.id, compId[name]!));
+        .where(eq(schema.competitors.id, id));
     }
 
     // 4. newcomers who haven't played: ensure a competitor at the default 1500
