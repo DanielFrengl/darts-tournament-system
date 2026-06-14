@@ -16,8 +16,9 @@ const RATINGS: { name: string; elo: number; note?: string }[] = [
   { name: "Bohy", elo: 1548 },
   { name: "Radim", elo: 1538 },
   { name: "Dan", elo: 1523 },
-  { name: "Jena", elo: 1514 },
-  { name: "Filip", elo: 1500, note: "nováček" },
+  { name: "Jéňa", elo: 1514 },
+  { name: "Filip", elo: 1500, note: "nový na turnaji" },
+  { name: "Aleš", elo: 1500, note: "nový na turnaji" },
   { name: "Volkie", elo: 1484 },
   { name: "Singl", elo: 1474 },
   { name: "Alina", elo: 1469 },
@@ -82,8 +83,8 @@ export default async function InfoPage() {
               statistikami
             </li>
             <li>
-              Chytré počítání kurzů: appka spočítá sílu (rating) každého hráče
-              z minulých turnajů, pak tisíckrát nasimuluje celý turnaj (
+              Chytré počítání kurzů: appka spočítá sílu (rating) každého hráče z
+              minulých turnajů, pak tisíckrát nasimuluje celý turnaj (
               <a
                 href="https://cs.wikipedia.org/wiki/Metoda_Monte_Carlo"
                 target="_blank"
@@ -133,8 +134,8 @@ export default async function InfoPage() {
           <p className="mt-4 text-xs text-muted-foreground">
             Bohužel se nám podařilo sehnat kompletní data jen z 1. a 3. turnaje,
             z 2. jen částečně, takže ratingy nejsou na 4. turnaj 100 % přesné.
-            To se změní, jakmile nasbíráme víc dat v průběhu. Kdo je nový, získal
-            automaticky průměr ela 1500.
+            To se změní, jakmile nasbíráme víc dat v průběhu. Kdo je nový,
+            získal automaticky průměr ela 1500.
           </p>
         </section>
 
@@ -184,8 +185,8 @@ export default async function InfoPage() {
           <p className="mt-2 text-sm text-muted-foreground">
             Po včerejší diskuzi s Filipem jsme si říkali, že by bylo docela cool
             ještě postavit program na zachytávání samotných hodů, což by pomohlo
-            udělat kurzy a predikce ještě přesnější. Tak uvidíme, jestli se
-            k tomu dostaneme.
+            udělat kurzy a predikce ještě přesnější. Tak uvidíme, jestli se k
+            tomu dostaneme.
           </p>
         </section>
       </article>
