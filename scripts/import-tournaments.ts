@@ -32,9 +32,16 @@ function legsToConfig(legs: string | undefined, groups: string[]) {
 }
 
 async function main() {
-  const files = process.argv.slice(2);
+  const args = process.argv.slice(2);
+  const files = args.filter((a) => !a.startsWith("+"));
+  const newcomers = args
+    .filter((a) => a.startsWith("+"))
+    .map((a) => a.slice(1).trim())
+    .filter(Boolean);
   if (files.length === 0)
-    throw new Error("usage: import-tournaments <file1.json> [file2.json ...]");
+    throw new Error(
+      "usage: import-tournaments <file1.json> [file2.json ...] [+NewcomerName ...]"
+    );
 
   const parsed: { raw: TournamentExport; t: ParsedTournament }[] = files.map(
     (f) => {
@@ -131,11 +138,27 @@ async function main() {
         .where(eq(schema.competitors.id, compId[name]!));
     }
 
+    // 4. newcomers who haven't played: ensure a competitor at the default 1500
+    for (const name of newcomers) {
+      const existing = await db
+        .select()
+        .from(schema.competitors)
+        .where(eq(schema.competitors.displayName, name));
+      if (existing[0]) {
+        console.log(`• newcomer "${name}" already exists — left as is`);
+        continue;
+      }
+      await db.insert(schema.competitors).values({ displayName: name });
+      console.log(`• added newcomer "${name}" at 1500`);
+    }
+
+    const printable: Record<string, number> = { ...finalRatings };
+    for (const n of newcomers) if (printable[n] === undefined) printable[n] = 1500;
     console.log("\nFinal ratings (high → low):");
-    [...allNames]
-      .sort((a, b) => (finalRatings[b] ?? 0) - (finalRatings[a] ?? 0))
+    Object.keys(printable)
+      .sort((a, b) => (printable[b] ?? 0) - (printable[a] ?? 0))
       .forEach((n) =>
-        console.log(`  ${n.padEnd(10)} ${Math.round(finalRatings[n] ?? 1500)}`)
+        console.log(`  ${n.padEnd(10)} ${Math.round(printable[n] ?? 1500)}`)
       );
   } finally {
     await client.end();
