@@ -43,7 +43,7 @@ export default async function InfoPage() {
           className="h-16 w-16 object-contain"
         />
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          Zdravím budoucí soutěžící čtvrté Jabloňové Open
+          Zdravím budoucí soutěžící čtvrté Jabloňové Open!
         </h1>
         <p className="text-muted-foreground">
           Turnaj je už zítra v 18:00. Máme pro vás s Davidem pár novinek.
