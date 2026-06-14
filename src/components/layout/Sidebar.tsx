@@ -15,6 +15,7 @@ import {
   FileText,
   Tv,
   Layers,
+  Gauge,
 } from "lucide-react";
 import { isAdmin, type Role } from "@/lib/roles";
 
@@ -30,6 +31,7 @@ const sections: NavSection[] = [
     items: [
       { href: "/tournament", label: "Přehled", icon: <Trophy className="h-4 w-4" /> },
       { href: "/leaderboard", label: "Žebříček", icon: <Award className="h-4 w-4" /> },
+      { href: "/elo", label: "Elo hráčů", icon: <Gauge className="h-4 w-4" /> },
       { href: "/display", label: "TV Display", icon: <Tv className="h-4 w-4" /> },
     ],
   },
