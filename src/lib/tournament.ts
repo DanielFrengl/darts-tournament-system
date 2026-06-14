@@ -9,6 +9,7 @@ import {
 } from "@/db/schema";
 import type { DB } from "@/db/client";
 import { publish } from "@/lib/event-bus";
+import { finalizeTournamentRatings } from "@/lib/competitor";
 import {
   TournamentConfigSchema,
   TournamentCreateSchema,
@@ -90,6 +91,11 @@ export class TournamentService {
       updates.finishedAt = new Date();
     }
     await this.db.update(tournaments).set(updates).where(eq(tournaments.id, id));
+    if (to === "finished") {
+      // Carry each player's final working elo back onto its competitor so
+      // the next tournament seeds from up-to-date ratings.
+      await finalizeTournamentRatings(this.db, id);
+    }
     publish(`tournament:${id}`, "status_changed", { status: to });
   }
 
