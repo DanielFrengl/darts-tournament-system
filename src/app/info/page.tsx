@@ -62,16 +62,16 @@ export default async function InfoPage() {
         </Link>
 
         <p className="mt-6 text-sm font-medium">Co v appce najdete:</p>
-        <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
+        <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
           <li>
-            sázení na zápasy i na celkového vítěze, sází se virtuální měna
+            Sázení na zápasy i na celkového vítěze, sází se virtuální měna
             „jablka“
           </li>
           <li>
-            živé kurzy a skóre, žebříček hráčů i sázkařů, profil se statistikami
+            Živé kurzy a skóre, žebříček hráčů i sázkařů, profil se statistikami
           </li>
           <li>
-            chytré počítání kurzů: appka spočítá sílu (rating) každého hráče
+            Chytré počítání kurzů: appka spočítá sílu (rating) každého hráče
             z minulých turnajů, pak tisíckrát nasimuluje celý turnaj (
             <a
               href="https://cs.wikipedia.org/wiki/Metoda_Monte_Carlo"
