@@ -50,7 +50,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body className="font-sans antialiased">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <SessionProvider session={session}>{children}</SessionProvider>
-          <Toaster richColors position="top-right" />
+          <Toaster richColors position="bottom-right" />
         </ThemeProvider>
       </body>
     </html>
