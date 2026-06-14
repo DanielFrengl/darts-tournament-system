@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Monte Carlo – kurz na vítěze turnaje (demo)</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#121821; --panel2:#0e141c; --line:#22303f;
+    --txt:#e8eef5; --muted:#8aa0b4; --accent:#ffb020; --accent2:#3fb6ff;
+    --good:#4ade80; --bad:#f87171;
+    --font: ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--font);
+       -webkit-font-smoothing:antialiased;padding:28px;line-height:1.45}
+  h1{font-size:20px;margin:0 0 4px;letter-spacing:.2px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:20px}
+  .controls{display:flex;gap:18px;align-items:center;flex-wrap:wrap;
+            background:var(--panel);border:1px solid var(--line);border-radius:12px;
+            padding:14px 16px;margin-bottom:20px}
+  .controls label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+  .controls input[type=range]{width:200px;accent-color:var(--accent)}
+  .val{color:var(--txt);font-variant-numeric:tabular-nums;font-weight:600}
+  button{background:var(--accent);color:#1a1205;border:0;border-radius:9px;
+         padding:10px 16px;font-weight:700;cursor:pointer;font-size:13px}
+  button:hover{filter:brightness(1.07)}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .card h2{font-size:13px;margin:0 0 2px;letter-spacing:.3px}
+  .card .hint{color:var(--muted);font-size:11px;margin:0 0 14px}
+  canvas{width:100%;display:block}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:10px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:9px;height:9px;border-radius:2px;display:inline-block}
+  .foot{color:var(--muted);font-size:11px;margin-top:18px}
+  code{background:#0e141c;border:1px solid var(--line);padding:1px 6px;border-radius:5px;color:#cfe2f2}
+</style>
+</head>
+<body>
+  <h1>Monte Carlo — kurz na vítěze turnaje</h1>
+  <div class="sub">Demo na ukázkových datech (16 hráčů, 4 skupiny po 4, postupují 2, pavouk QF/SF/F).
+    Kurz = férový kurz z pravděpodobnosti (bez marže). Tohle je jen náhled principu — finální verze poběží v appce z reálných Elo ratingů.</div>
+
+  <div class="controls">
+    <label>Počet běhů simulace
+      <input id="runs" type="range" min="200" max="20000" step="200" value="8000" />
+      <span class="val" id="runsVal">8000</span>
+    </label>
+    <label>Marže provozovatele (house edge)
+      <input id="edge" type="range" min="0" max="0.15" step="0.01" value="0.05" />
+      <span class="val" id="edgeVal">5 %</span>
+    </label>
+    <button id="run">Spustit simulaci ▶</button>
+    <span class="val" id="timing" style="color:var(--muted);font-weight:400"></span>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>1 · Šance na celkové vítězství &nbsp;→&nbsp; kurz</h2>
+      <p class="hint">Kolikrát hráč vyhrál turnaj / počet běhů. Číslo vpravo je férový kurz.</p>
+      <canvas id="cWin" height="430"></canvas>
+    </div>
+
+    <div class="card">
+      <h2>2 · Konvergence odhadu</h2>
+      <p class="hint">Jak se ustaluje šance na vítězství u TOP 3 favoritů s rostoucím počtem běhů.</p>
+      <canvas id="cConv" height="430"></canvas>
+      <div class="legend" id="convLegend"></div>
+    </div>
+
+    <div class="card">
+      <h2>3 · Šance dojít do fáze (heatmapa)</h2>
+      <p class="hint">Pravděpodobnost, že hráč dojde aspoň do dané fáze. Tmavší = vyšší.</p>
+      <canvas id="cHeat" height="430"></canvas>
+    </div>
+
+    <div class="card">
+      <h2>4 · Rozdělení konečného umístění</h2>
+      <p class="hint">Pro každého hráče skladba, kde nejčastěji skončí.</p>
+      <canvas id="cPlace" height="430"></canvas>
+      <div class="legend" id="placeLegend"></div>
+    </div>
+  </div>
+
+  <p class="foot">Algoritmus 1:1 s návrhem: <code>winProbability(rA,rB)=1/(1+10^((rB−rA)/400))</code>,
+     leg-po-legu na <code>best-of</code>, skupiny round-robin → postup → pavouk; opakováno N×.</p>
+
+<script>
+// ---------- ukázková data ----------
+const PLAYERS = [
+  {name:"Honza",  elo:1720},{name:"Petr",   elo:1665},{name:"Lukáš",  elo:1640},
+  {name:"Tomáš",  elo:1610},{name:"Marek",  elo:1585},{name:"David",  elo:1560},
+  {name:"Filip",  elo:1535},{name:"Adam",   elo:1510},{name:"Ondra",  elo:1500},
+  {name:"Jirka",  elo:1485},{name:"Martin", elo:1470},{name:"Pavel",  elo:1450},
+  {name:"Radek",  elo:1430},{name:"Roman",  elo:1500},{name:"Vašek",  elo:1500},
+  {name:"Standa", elo:1500},
+];
+const CFG = { groups:4, perGroup:4, advance:2, boGroup:3, boQF:5, boSF:5, boF:7 };
+const PHASES = ["Skupina","Čtvrtfinále","Semifinále","Finále","Vítěz"];
+const PLACE_BUCKETS = ["Vítěz","Finále","Semifinále","Čtvrtfinále","Skupina"];
+const PLACE_COLORS  = ["#ffb020","#3fb6ff","#a78bfa","#4ade80","#475569"];
+
+// ---------- matematika ----------
+function winProb(a,b){ return 1/(1+Math.pow(10,(b-a)/400)); }
+// odehraj zápas best-of -> vrať true pokud vyhraje A
+function playMatch(a,b,bestOf){
+  const need=Math.ceil(bestOf/2); const p=winProb(a.elo,b.elo);
+  let wa=0,wb=0;
+  while(wa<need&&wb<need){ if(Math.random()<p)wa++; else wb++; }
+  return wa>need-1 ? a : b;
+}
+function shuffle(arr){ for(let i=arr.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[arr[i],arr[j]]=[arr[j],arr[i]];} return arr; }
+
+// jeden běh celého turnaje; vrať {champ, runner, reached:Map(name->maxPhaseIdx), place:Map(name->bucketIdx)}
+function simulateOnce(players){
+  const reached={}, place={};
+  players.forEach(p=>{reached[p.name]=0; place[p.name]=4;}); // default: Skupina
+  // náhodné rozlosování do skupin
+  const pool=shuffle(players.slice());
+  const groups=Array.from({length:CFG.groups},()=>[]);
+  pool.forEach((p,i)=>groups[i%CFG.groups].push(p));
+  // skupiny: round robin, body = výhry
+  let advancers=[];
+  for(const g of groups){
+    const wins={}; g.forEach(p=>wins[p.name]=0);
+    for(let i=0;i<g.length;i++)for(let j=i+1;j<g.length;j++){
+      const w=playMatch(g[i],g[j],CFG.boGroup); wins[w.name]++;
+    }
+    const ranked=g.slice().sort((a,b)=> (wins[b.name]-wins[a.name]) || (Math.random()-0.5));
+    ranked.slice(0,CFG.advance).forEach(p=>{
+      advancers.push(p);
+      reached[p.name]=Math.max(reached[p.name],1); // došel do pavouka (QF)
+      place[p.name]=Math.min(place[p.name],3);      // aspoň čtvrtfinále
+    });
+  }
+  // pavouk – seed podle Ela aby silní nešli hned na sebe
+  advancers.sort((a,b)=>b.elo-a.elo);
+  // standardní rozlosování 1vN
+  let bracket=seedBracket(advancers);
+  const roundBoMap=[CFG.boQF,CFG.boSF,CFG.boF];
+  const roundPhase=[2,3,4]; // index do PHASES pro toho, kdo vyhraje kolo (SF/F/Vítěz)
+  let round=bracket, rIdx=0;
+  while(round.length>1){
+    const bestOf=roundBoMap[Math.min(rIdx,roundBoMap.length-1)];
+    const next=[];
+    for(let i=0;i<round.length;i+=2){
+      const a=round[i], b=round[i+1];
+      if(!b){ next.push(a); continue; }
+      const w=playMatch(a,b,bestOf); const l=(w===a)?b:a;
+      // poražený: zaznamenej umístění podle kola
+      if(round.length===2){ place[l.name]=Math.min(place[l.name],1); reached[l.name]=Math.max(reached[l.name],3);} // finalista
+      else if(round.length===4){ place[l.name]=Math.min(place[l.name],2); reached[l.name]=Math.max(reached[l.name],2);} // semifinále
+      // vítěz postupuje
+      reached[w.name]=Math.max(reached[w.name], Math.min(roundPhase[Math.min(rIdx,2)],4));
+      next.push(w);
+    }
+    round=next; rIdx++;
+  }
+  const champ=round[0];
+  reached[champ.name]=4; place[champ.name]=0;
+  // runner-up = poražený finalista (place idx 1)
+  let runner=null;
+  return {champName:champ.name, reached, place};
+}
+function seedBracket(list){
+  // doplň na mocninu 2 "bye" (null)
+  let n=1; while(n<list.length)n*=2;
+  const seeds=list.slice(); while(seeds.length<n)seeds.push(null);
+  // klasické pořadí seedů 1..n
+  let order=[0];
+  for(let size=1;size<n;size*=2){
+    const next=[];
+    for(const s of order){ next.push(s); next.push(size*2-1-s); }
+    order=next;
+  }
+  return order.map(i=>seeds[i]).filter(x=>x!==null);
+}
+
+// ---------- běh + agregace ----------
+function runSimulation(players, runs){
+  const champCount={}, reachCount={}, placeCount={};
+  players.forEach(p=>{
+    champCount[p.name]=0;
+    reachCount[p.name]=[0,0,0,0,0];     // Skupina..Vítěz (kumulativně "došel aspoň")
+    placeCount[p.name]=[0,0,0,0,0];     // bucket dle PLACE_BUCKETS
+  });
+  // konvergence: ulož průběžnou champ-prob pro průběžné top3 (zafixujeme po předběhu)
+  const topNames = players.slice().sort((a,b)=>b.elo-a.elo).slice(0,3).map(p=>p.name);
+  const convSeries = topNames.map(()=>[]);
+  const sampleEvery = Math.max(1, Math.floor(runs/120));
+  const running = {}; topNames.forEach(n=>running[n]=0);
+
+  for(let r=1;r<=runs;r++){
+    const res=simulateOnce(players);
+    champCount[res.champName]++;
+    topNames.forEach(n=>{ if(res.champName===n) running[n]++; });
+    for(const p of players){
+      const mx=res.reached[p.name];
+      for(let ph=0;ph<=mx;ph++) reachCount[p.name][ph]++;
+      placeCount[p.name][res.place[p.name]]++;
+    }
+    if(r%sampleEvery===0||r===runs){
+      topNames.forEach((n,i)=>convSeries[i].push({x:r, y:running[n]/r}));
+    }
+  }
+  return {runs, champCount, reachCount, placeCount, topNames, convSeries};
+}
+
+// ---------- vykreslení ----------
+function setupCanvas(cv){
+  const dpr=window.devicePixelRatio||1;
+  const w=cv.clientWidth, h=parseInt(cv.getAttribute('height'));
+  cv.width=w*dpr; cv.height=h*dpr;
+  const ctx=cv.getContext('2d'); ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,w,h);
+  return {ctx,w,h};
+}
+const C={txt:'#e8eef5',muted:'#8aa0b4',line:'#22303f',accent:'#ffb020',accent2:'#3fb6ff'};
+function fmtOdds(p){ return p<=0?'—':(1/p).toFixed(2); }
+
+function drawWin(agg){
+  const {ctx,w,h}=setupCanvas(document.getElementById('cWin'));
+  const edge=parseFloat(document.getElementById('edge').value);
+  const rows=PLAYERS.map(p=>({name:p.name,prob:agg.champCount[p.name]/agg.runs}))
+                    .sort((a,b)=>b.prob-a.prob);
+  const pad=8, left=66, right=58, top=6, rowH=(h-top-pad)/rows.length, max=Math.max(...rows.map(r=>r.prob),0.01);
+  rows.forEach((r,i)=>{
+    const y=top+i*rowH; const bw=(w-left-right)*(r.prob/max);
+    ctx.fillStyle=C.muted; ctx.font='11px ui-sans-serif'; ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.fillText(r.name, left-8, y+rowH/2);
+    const grad=ctx.createLinearGradient(left,0,left+bw,0);
+    grad.addColorStop(0,'#ffb020'); grad.addColorStop(1,'#ff7a59');
+    ctx.fillStyle=grad; ctx.beginPath();
+    const bh=Math.max(6,rowH-7); roundRect(ctx,left,y+(rowH-bh)/2,Math.max(2,bw),bh,4); ctx.fill();
+    ctx.fillStyle=C.txt; ctx.textAlign='left';
+    const odds=fmtOdds(r.prob*(1-edge));
+    ctx.fillText((r.prob*100).toFixed(1)+'%  ·  '+odds+'×', left+bw+8, y+rowH/2);
+  });
+}
+
+function drawConv(agg){
+  const {ctx,w,h}=setupCanvas(document.getElementById('cConv'));
+  const pad={l:42,r:12,t:10,b:24};
+  const cols=['#ffb020','#3fb6ff','#a78bfa'];
+  let maxY=0; agg.convSeries.forEach(s=>s.forEach(pt=>maxY=Math.max(maxY,pt.y)));
+  maxY=Math.max(maxY,0.05)*1.15;
+  // osy
+  ctx.strokeStyle=C.line; ctx.lineWidth=1; ctx.beginPath();
+  ctx.moveTo(pad.l,pad.t); ctx.lineTo(pad.l,h-pad.b); ctx.lineTo(w-pad.r,h-pad.b); ctx.stroke();
+  ctx.fillStyle=C.muted; ctx.font='10px ui-sans-serif'; ctx.textAlign='right'; ctx.textBaseline='middle';
+  for(let g=0;g<=4;g++){ const yv=maxY*g/4; const y=h-pad.b-(h-pad.t-pad.b)*(g/4);
+    ctx.fillText((yv*100).toFixed(0)+'%',pad.l-6,y);
+    ctx.strokeStyle='#16202b'; ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke(); }
+  const X=r=>pad.l+(w-pad.l-pad.r)*(r/agg.runs);
+  const Y=v=>h-pad.b-(h-pad.t-pad.b)*(v/maxY);
+  agg.convSeries.forEach((s,i)=>{
+    ctx.strokeStyle=cols[i]; ctx.lineWidth=2; ctx.beginPath();
+    s.forEach((pt,k)=>{ const x=X(pt.x),y=Y(pt.y); k?ctx.lineTo(x,y):ctx.moveTo(x,y); }); ctx.stroke();
+  });
+  ctx.fillStyle=C.muted; ctx.textAlign='center'; ctx.fillText('počet běhů →',(w+pad.l)/2,h-6);
+  const leg=document.getElementById('convLegend');
+  leg.innerHTML=agg.topNames.map((n,i)=>`<span><i class="dot" style="background:${cols[i]}"></i>${n}</span>`).join('');
+}
+
+function drawHeat(agg){
+  const {ctx,w,h}=setupCanvas(document.getElementById('cHeat'));
+  const rows=PLAYERS.map(p=>({name:p.name,vals:agg.reachCount[p.name].map(c=>c/agg.runs)}))
+                    .sort((a,b)=>b.vals[4]-a.vals[4]);
+  const left=66, top=22, right=8, bottom=6;
+  const cols=PHASES.length; const cw=(w-left-right)/cols; const rh=(h-top-bottom)/rows.length;
+  ctx.font='10px ui-sans-serif'; ctx.textBaseline='middle';
+  PHASES.forEach((ph,c)=>{ ctx.fillStyle=C.muted; ctx.textAlign='center';
+    ctx.fillText(ph,left+cw*c+cw/2,12); });
+  rows.forEach((r,i)=>{
+    const y=top+i*rh;
+    ctx.fillStyle=C.muted; ctx.textAlign='right'; ctx.fillText(r.name,left-8,y+rh/2);
+    r.vals.forEach((v,c)=>{
+      const x=left+cw*c;
+      // barva: tmavě modrá -> jantarová dle hodnoty
+      const t=v; const col=heatColor(t);
+      ctx.fillStyle=col; roundRect(ctx,x+1.5,y+1.5,cw-3,rh-3,3); ctx.fill();
+      if(v>=0.06){ ctx.fillStyle = t>0.5?'#1a1205':'#cfe2f2'; ctx.textAlign='center';
+        ctx.fillText((v*100).toFixed(0),x+cw/2,y+rh/2); }
+    });
+  });
+}
+function heatColor(t){ // 0..1
+  // od #0e1c2b (studená) k #ffb020 (teplá) přes #3fb6ff
+  const stops=[[14,28,43],[35,90,140],[63,182,255],[255,176,32]];
+  const seg=Math.min(2.999, t*3); const i=Math.floor(seg); const f=seg-i;
+  const a=stops[i], b=stops[i+1];
+  const c=a.map((v,k)=>Math.round(v+(b[k]-v)*f));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+function drawPlace(agg){
+  const {ctx,w,h}=setupCanvas(document.getElementById('cPlace'));
+  const rows=PLAYERS.map(p=>({name:p.name,vals:agg.placeCount[p.name].map(c=>c/agg.runs)}))
+                    .sort((a,b)=> (b.vals[0]-a.vals[0]) || (b.vals[1]-a.vals[1]) );
+  const left=66, right=8, top=6, bottom=6, rowH=(h-top-bottom)/rows.length;
+  rows.forEach((r,i)=>{
+    const y=top+i*rowH; let x=left; const bw=w-left-right; const bh=Math.max(7,rowH-7);
+    ctx.fillStyle=C.muted; ctx.font='11px ui-sans-serif'; ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.fillText(r.name,left-8,y+rowH/2);
+    r.vals.forEach((v,b)=>{ const seg=bw*v; if(seg<=0)return;
+      ctx.fillStyle=PLACE_COLORS[b]; ctx.fillRect(x,y+(rowH-bh)/2,seg,bh); x+=seg; });
+  });
+  const leg=document.getElementById('placeLegend');
+  leg.innerHTML=PLACE_BUCKETS.map((b,i)=>`<span><i class="dot" style="background:${PLACE_COLORS[i]}"></i>${b}</span>`).join('');
+}
+
+function roundRect(ctx,x,y,w,h,r){ r=Math.min(r,h/2,w/2); ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+// ---------- ovládání ----------
+function go(){
+  const runs=parseInt(document.getElementById('runs').value);
+  const t0=performance.now();
+  const agg=runSimulation(PLAYERS,runs);
+  const dt=performance.now()-t0;
+  drawWin(agg); drawConv(agg); drawHeat(agg); drawPlace(agg);
+  document.getElementById('timing').textContent=`${runs.toLocaleString('cs')} běhů za ${dt.toFixed(0)} ms`;
+  window.__lastAgg=agg;
+}
+document.getElementById('run').onclick=go;
+document.getElementById('runs').oninput=e=>document.getElementById('runsVal').textContent=(+e.target.value).toLocaleString('cs');
+document.getElementById('edge').oninput=e=>{ document.getElementById('edgeVal').textContent=Math.round(e.target.value*100)+' %';
+  if(window.__lastAgg) drawWin(window.__lastAgg); };
+window.addEventListener('resize',()=>{ if(window.__lastAgg){drawWin(__lastAgg);drawConv(__lastAgg);drawHeat(__lastAgg);drawPlace(__lastAgg);} });
+go();
+</script>
+</body>
+</html>
