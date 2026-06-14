@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/roles";
 
 // Routes that don't require a session.
-const PUBLIC_EXACT = new Set(["/login", "/register"]);
+const PUBLIC_EXACT = new Set(["/login", "/register", "/info"]);
 const PUBLIC_PREFIXES = ["/api/", "/_next/", "/display"];
 
 const ADMIN_ONLY_PREFIX = "/admin";
