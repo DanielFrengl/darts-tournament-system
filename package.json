@@ -18,7 +18,8 @@
     "db:migrate": "node --env-file=.env node_modules/drizzle-kit/bin.cjs migrate",
     "db:migrate:deploy": "drizzle-kit migrate",
     "db:push": "node --env-file=.env node_modules/drizzle-kit/bin.cjs push",
-    "db:studio": "node --env-file=.env node_modules/drizzle-kit/bin.cjs studio"
+    "db:studio": "node --env-file=.env node_modules/drizzle-kit/bin.cjs studio",
+    "import-history": "node --env-file=.env --import tsx scripts/import-history.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.2",

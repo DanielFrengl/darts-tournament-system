@@ -43,7 +43,7 @@ describe("simulateTournament", () => {
       runs: 4000,
       rng: seeded(7),
     });
-    expect(res.winProb["p0"]).toBeGreaterThan(res.winProb["p3"]);
+    expect(res.winProb["p0"]!).toBeGreaterThan(res.winProb["p3"]!);
   });
 
   it("is deterministic for a fixed seed", () => {
@@ -63,6 +63,6 @@ describe("simulateTournament", () => {
       runs: 1000,
       rng: seeded(3),
     });
-    expect(res.reachProb["p0"][4]).toBeCloseTo(res.winProb["p0"], 10);
+    expect(res.reachProb["p0"]![4]).toBeCloseTo(res.winProb["p0"]!, 10);
   });
 });

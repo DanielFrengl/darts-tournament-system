@@ -57,24 +57,27 @@ export function simulateTournament(
 
   for (let r = 0; r < runs; r++) {
     const out = simulateOnce(players, cfg, rng);
-    win[out.champion]++;
-    if (out.runnerUp) runner[out.runnerUp]++;
-    if (out.third) third[out.third]++;
+    win[out.champion] = (win[out.champion] ?? 0) + 1;
+    if (out.runnerUp) runner[out.runnerUp] = (runner[out.runnerUp] ?? 0) + 1;
+    if (out.third) third[out.third] = (third[out.third] ?? 0) + 1;
     for (const p of players) {
-      const stage = out.reached[p.id]; // 0..4
-      for (let s = 0; s <= stage; s++) reach[p.id][s]++;
-      place[p.id][out.bucket[p.id]]++;
+      const stage = out.reached[p.id] ?? 0;
+      const rp = reach[p.id]!;
+      for (let s = 0; s <= stage; s++) rp[s] = (rp[s] ?? 0) + 1;
+      const pl = place[p.id]!;
+      const bk = out.bucket[p.id] ?? 4;
+      pl[bk] = (pl[bk] ?? 0) + 1;
     }
   }
 
   const norm = (m: Record<string, number>) => {
     const o: Record<string, number> = {};
-    for (const k in m) o[k] = m[k] / runs;
+    for (const k in m) o[k] = m[k]! / runs;
     return o;
   };
   const normArr = (m: Record<string, number[]>) => {
     const o: Record<string, number[]> = {};
-    for (const k in m) o[k] = m[k].map((c) => c / runs);
+    for (const k in m) o[k] = m[k]!.map((c) => c / runs);
     return o;
   };
 
@@ -111,22 +114,24 @@ function simulateOnce(
   // random draw into groups
   const pool = shuffle(players.slice(), rng);
   const groups: SimPlayer[][] = Array.from({ length: cfg.groupCount }, () => []);
-  pool.forEach((p, i) => groups[i % cfg.groupCount].push(p));
+  pool.forEach((p, i) => groups[i % cfg.groupCount]!.push(p));
 
   const advancers: SimPlayer[] = [];
   for (const g of groups) {
     const wins: Record<string, number> = {};
     g.forEach((p) => (wins[p.id] = 0));
     for (let i = 0; i < g.length; i++)
-      for (let j = i + 1; j < g.length; j++)
-        wins[playMatch(g[i], g[j], cfg.bestOfGroup, rng).id]++;
+      for (let j = i + 1; j < g.length; j++) {
+        const w = playMatch(g[i]!, g[j]!, cfg.bestOfGroup, rng);
+        wins[w.id] = (wins[w.id] ?? 0) + 1;
+      }
     const ranked = g
       .slice()
-      .sort((a, b) => wins[b.id] - wins[a.id] || rng() - 0.5);
+      .sort((a, b) => (wins[b.id] ?? 0) - (wins[a.id] ?? 0) || rng() - 0.5);
     ranked.slice(0, cfg.advancePerGroup).forEach((p) => {
       advancers.push(p);
-      reached[p.id] = Math.max(reached[p.id], 1); // reached bracket (quarter)
-      bucket[p.id] = Math.min(bucket[p.id], 3); // at least quarterfinalist
+      reached[p.id] = Math.max(reached[p.id] ?? 0, 1); // reached bracket (quarter)
+      bucket[p.id] = Math.min(bucket[p.id] ?? 4, 3); // at least quarterfinalist
     });
   }
 
@@ -148,7 +153,7 @@ function simulateOnce(
     const winnerStage = isFinal ? 4 : isSemi ? 3 : 2; // champion / final / semi
     const next: SimPlayer[] = [];
     for (let i = 0; i < round.length; i += 2) {
-      const a = round[i];
+      const a = round[i]!;
       const b = round[i + 1];
       if (!b) {
         next.push(a);
@@ -156,22 +161,22 @@ function simulateOnce(
       }
       const w = playMatch(a, b, bestOf, rng);
       const l = w === a ? b : a;
-      reached[w.id] = Math.max(reached[w.id], winnerStage);
+      reached[w.id] = Math.max(reached[w.id] ?? 0, winnerStage);
       if (isFinal) {
         runnerUp = l.id;
-        bucket[l.id] = Math.min(bucket[l.id], 1);
-        reached[l.id] = Math.max(reached[l.id], 3);
+        bucket[l.id] = Math.min(bucket[l.id] ?? 4, 1);
+        reached[l.id] = Math.max(reached[l.id] ?? 0, 3);
       } else if (isSemi) {
         semiLosers.push(l.id);
-        bucket[l.id] = Math.min(bucket[l.id], 2);
-        reached[l.id] = Math.max(reached[l.id], 2);
+        bucket[l.id] = Math.min(bucket[l.id] ?? 4, 2);
+        reached[l.id] = Math.max(reached[l.id] ?? 0, 2);
       }
       next.push(w);
     }
     round = next;
   }
 
-  const champion = round[0].id;
+  const champion = round[0]!.id;
   reached[champion] = 4;
   bucket[champion] = 0;
 
@@ -180,7 +185,7 @@ function simulateOnce(
     const b = players.find((p) => p.id === semiLosers[1])!;
     third = playMatch(a, b, cfg.bestOfSemi, rng).id;
   } else if (semiLosers.length) {
-    third = semiLosers[0];
+    third = semiLosers[0]!;
   }
 
   return { champion, runnerUp, third, reached, bucket };
@@ -207,7 +212,9 @@ function playMatch(
 function shuffle<T>(arr: T[], rng: () => number): T[] {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+    const tmp = arr[i]!;
+    arr[i] = arr[j]!;
+    arr[j] = tmp;
   }
   return arr;
 }
@@ -227,5 +234,7 @@ function seedBracket(list: SimPlayer[]): SimPlayer[] {
     }
     order = nextOrder;
   }
-  return order.map((i) => seeds[i]).filter((x): x is SimPlayer => x !== null);
+  return order
+    .map((i) => seeds[i] ?? null)
+    .filter((x): x is SimPlayer => x !== null);
 }

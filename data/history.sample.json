@@ -1,0 +1,23 @@
+{
+  "competitors": ["Honza", "Petr", "Lukáš", "Tomáš"],
+  "tournaments": [
+    {
+      "name": "Jablonová Open #1",
+      "matches": [
+        { "a": "Honza", "b": "Petr", "scoreA": 3, "scoreB": 1 },
+        { "a": "Lukáš", "b": "Tomáš", "scoreA": 3, "scoreB": 2 },
+        { "a": "Honza", "b": "Lukáš", "scoreA": 3, "scoreB": 0 },
+        { "a": "Petr", "b": "Tomáš", "scoreA": 3, "scoreB": 2 }
+      ]
+    },
+    {
+      "name": "Jablonová Open #2",
+      "matches": [
+        { "a": "Honza", "b": "Tomáš", "scoreA": 3, "scoreB": 2 },
+        { "a": "Petr", "b": "Lukáš", "scoreA": 1, "scoreB": 3 },
+        { "a": "Honza", "b": "Petr", "scoreA": 3, "scoreB": 2 },
+        { "a": "Lukáš", "b": "Tomáš", "scoreA": 3, "scoreB": 1 }
+      ]
+    }
+  ]
+}
