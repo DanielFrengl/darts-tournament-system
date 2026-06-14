@@ -165,7 +165,16 @@ export default async function InfoPage() {
           <p className="mt-2 text-sm text-muted-foreground">
             Appka je zatím prototyp a budeme ji průběžně vylepšovat a doplňovat.
             Když na něco narazíte, dejte nám vědět. Přímo v appce přibude
-            tlačítko „Nahlásit chybu“, nebo nám napište.
+            tlačítko „Nahlásit chybu“, nebo mi napište na IG{" "}
+            <a
+              href="https://instagram.com/danielfrengl"
+              target="_blank"
+              rel="noreferrer"
+              className="underline hover:text-foreground"
+            >
+              @danielfrengl
+            </a>
+            .
           </p>
         </section>
 
@@ -185,7 +194,7 @@ export default async function InfoPage() {
         Dotazy a návrhy na vylepšení si nechte na zítra, ještě vám to na místě
         celé vysvětlím. Uvidíme se zítra!
         <br />
-        Daniel Frengl
+        <span className="font-normal italic">-Daniel Frengl</span>
       </p>
     </main>
   );
