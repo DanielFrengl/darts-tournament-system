@@ -1,6 +1,6 @@
-import { eq, and, isNotNull } from "drizzle-orm";
+import { eq, and, ne, isNotNull } from "drizzle-orm";
 import type { DB } from "@/db/client";
-import { competitors, players } from "@/db/schema";
+import { competitors, players, tournaments } from "@/db/schema";
 
 /**
  * Add a player to a tournament seeded from an existing competitor's
@@ -50,6 +50,35 @@ export async function addNewcomer(
     })
     .returning();
   return p!;
+}
+
+/**
+ * Link a competitor to a user account and propagate the account onto the
+ * competitor's player rows in non-finished tournaments (so the user shows
+ * up as themselves in the current event).
+ */
+export async function linkCompetitorToUser(
+  db: DB,
+  competitorId: string,
+  userId: string
+) {
+  await db
+    .update(competitors)
+    .set({ userId })
+    .where(eq(competitors.id, competitorId));
+  const rows = await db
+    .select({ id: players.id })
+    .from(players)
+    .innerJoin(tournaments, eq(players.tournamentId, tournaments.id))
+    .where(
+      and(
+        eq(players.competitorId, competitorId),
+        ne(tournaments.status, "finished")
+      )
+    );
+  for (const r of rows) {
+    await db.update(players).set({ userId }).where(eq(players.id, r.id));
+  }
 }
 
 /**

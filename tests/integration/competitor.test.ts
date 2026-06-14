@@ -8,11 +8,12 @@ import {
 } from "vitest";
 import { eq } from "drizzle-orm";
 import { setupTestDb, truncateAll, teardownTestDb, testDb } from "../setup/db";
-import { competitors, players, tournaments } from "@/db/schema";
+import { competitors, players, tournaments, users } from "@/db/schema";
 import {
   addPlayerFromCompetitor,
   addNewcomer,
   finalizeTournamentRatings,
+  linkCompetitorToUser,
 } from "@/lib/competitor";
 
 beforeAll(setupTestDb);
@@ -75,5 +76,34 @@ describe("competitor seeding", () => {
       .from(competitors)
       .where(eq(competitors.id, c!.id));
     expect(after!.eloRating).toBe(1640);
+  });
+
+  it("links a competitor to a user and propagates to active players", async () => {
+    const [u] = await testDb
+      .insert(users)
+      .values({ email: "h@x.cz", username: "honza", passwordHash: "x" })
+      .returning();
+    const [c] = await testDb
+      .insert(competitors)
+      .values({ displayName: "Honza", eloRating: 1600 })
+      .returning();
+    const [t] = await testDb
+      .insert(tournaments)
+      .values({ name: "T", status: "groups", configJson: {} })
+      .returning();
+    const [p] = await testDb
+      .insert(players)
+      .values({ tournamentId: t!.id, name: "Honza", competitorId: c!.id })
+      .returning();
+
+    await linkCompetitorToUser(testDb, c!.id, u!.id);
+
+    const [c2] = await testDb
+      .select()
+      .from(competitors)
+      .where(eq(competitors.id, c!.id));
+    const [p2] = await testDb.select().from(players).where(eq(players.id, p!.id));
+    expect(c2!.userId).toBe(u!.id);
+    expect(p2!.userId).toBe(u!.id);
   });
 });
