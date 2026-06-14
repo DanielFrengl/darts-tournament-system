@@ -103,6 +103,10 @@ export function SidebarNav({
           </nav>
         </>
       )}
+
+      <p className="mt-auto px-2 pt-4 text-[10px] text-muted-foreground/60">
+        Made by danielfrengl
+      </p>
     </div>
   );
 }
