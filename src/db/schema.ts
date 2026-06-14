@@ -146,15 +146,29 @@ export const players = pgTable(
     groupId: uuid("group_id").references(() => groups.id, { onDelete: "set null" }),
     seed: integer("seed"),
     eloRating: integer("elo_rating").notNull().default(1500),
+    competitorId: uuid("competitor_id").references(() => competitors.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     tournamentIdx: index("players_tournament_idx").on(t.tournamentId),
     groupIdx: index("players_group_idx").on(t.groupId),
     userIdx: index("players_user_idx").on(t.userId),
+    competitorIdx: index("players_competitor_idx").on(t.competitorId),
     tournamentUserUq: uniqueIndex("players_tournament_user_uq").on(t.tournamentId, t.userId),
   })
 );
+
+export const competitors = pgTable("competitors", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  displayName: varchar("display_name", { length: 80 }).notNull(),
+  eloRating: integer("elo_rating").notNull().default(1500),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "set null" })
+    .unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const matches = pgTable(
   "matches",
