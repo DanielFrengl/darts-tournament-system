@@ -49,7 +49,6 @@ export function AppShell({
               alt={systemName}
               className="h-7 w-7 rounded object-contain"
             />
-            <span className="truncate text-sm font-semibold">{systemName}</span>
           </div>
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             {isDebug(user.role) && (
