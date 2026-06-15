@@ -42,6 +42,11 @@ export const ProfileUpdateSchema = z
   );
 export type ProfileUpdateInput = z.infer<typeof ProfileUpdateSchema>;
 
+export const AdminPasswordSetSchema = z.object({
+  newPassword: z.string().min(8, "Heslo musí mít alespoň 8 znaků").max(200),
+});
+export type AdminPasswordSetInput = z.infer<typeof AdminPasswordSetSchema>;
+
 export const CapitalAdjustSchema = z.object({
   amount: z.number().refine((n) => n !== 0, { message: "amount must not be zero" }),
   note: z.string().min(1).max(500),
