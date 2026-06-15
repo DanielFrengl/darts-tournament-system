@@ -35,6 +35,15 @@ export default async function AdminCompetitorsPage() {
     label: `${displayName(u)} (@${u.username})`,
   }));
 
+  // Registered users not yet linked to any competitor — candidates for a
+  // fresh newcomer (1500).
+  const pairedUserIds = new Set(
+    rows.map((r) => r.userId).filter((x): x is string => !!x)
+  );
+  const unpairedUsers = allUsers
+    .filter((u) => !pairedUserIds.has(u.id))
+    .map((u) => ({ id: u.id, label: `${displayName(u)} (@${u.username})` }));
+
   const active = await tournamentService.getActive();
 
   return (
@@ -46,6 +55,7 @@ export default async function AdminCompetitorsPage() {
       <CompetitorLinker
         competitors={rows}
         users={userOptions}
+        unpairedUsers={unpairedUsers}
         activeTournamentId={active?.id ?? null}
       />
     </div>

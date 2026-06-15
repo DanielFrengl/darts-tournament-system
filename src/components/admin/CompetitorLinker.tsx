@@ -6,6 +6,7 @@ import {
   recomputeOddsAction,
   setEloAction,
   unlockEloAction,
+  createNewcomerForUserAction,
 } from "@/app/admin/competitors/actions";
 
 interface CompetitorRow {
@@ -25,10 +26,12 @@ interface UserOption {
 export function CompetitorLinker({
   competitors,
   users,
+  unpairedUsers,
   activeTournamentId,
 }: {
   competitors: CompetitorRow[];
   users: UserOption[];
+  unpairedUsers: UserOption[];
   activeTournamentId: string | null;
 }) {
   const [busy, setBusy] = useState(false);
@@ -36,6 +39,39 @@ export function CompetitorLinker({
 
   return (
     <div className="space-y-4">
+      {unpairedUsers.length > 0 && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+          <p className="text-sm font-medium">
+            Nepřiřazení uživatelé ({unpairedUsers.length})
+          </p>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Registrovaní účtu bez soutěžícího. Pokud je to nováček, přidej ho na
+            1500. (Existujícího hráče naopak napoj v tabulce níž.)
+          </p>
+          <ul className="space-y-2">
+            {unpairedUsers.map((u) => (
+              <li key={u.id} className="flex items-center justify-between gap-2">
+                <span className="text-sm">{u.label}</span>
+                <form
+                  action={async (fd) => {
+                    const res = await createNewcomerForUserAction(fd);
+                    if (!res.ok) setMsg(res.error);
+                  }}
+                >
+                  <input type="hidden" name="userId" value={u.id} />
+                  <button
+                    type="submit"
+                    className="rounded-md bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-900 hover:bg-white"
+                  >
+                    Přidat jako nováčka (1500)
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {activeTournamentId && (
         <form
           action={async (fd) => {

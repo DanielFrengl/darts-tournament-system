@@ -3,9 +3,10 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
-import { markets, marketSelections } from "@/db/schema";
+import { markets, marketSelections, competitors, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { isAdmin } from "@/lib/roles";
+import { displayName } from "@/lib/names";
 import {
   linkCompetitorToUser,
   setCompetitorElo,
@@ -27,6 +28,38 @@ export async function linkAction(formData: FormData): Promise<Result> {
   if (!competitorId || !userId)
     return { ok: false, error: "Chybí hráč nebo uživatel" };
   await linkCompetitorToUser(db, competitorId, userId);
+  revalidatePath("/admin/competitors");
+  return { ok: true };
+}
+
+export async function createNewcomerForUserAction(
+  formData: FormData
+): Promise<Result> {
+  if (!(await ensureAdmin())) return { ok: false, error: "Nedostatečná práva" };
+  const userId = String(formData.get("userId") ?? "");
+  if (!userId) return { ok: false, error: "Chybí uživatel" };
+
+  // Don't create a duplicate if this user is already linked to a competitor.
+  const existing = await db
+    .select({ id: competitors.id })
+    .from(competitors)
+    .where(eq(competitors.userId, userId));
+  if (existing[0]) return { ok: false, error: "Uživatel už je spárovaný" };
+
+  const [u] = await db
+    .select({
+      username: users.username,
+      firstName: users.firstName,
+      lastName: users.lastName,
+    })
+    .from(users)
+    .where(eq(users.id, userId));
+  if (!u) return { ok: false, error: "Uživatel nenalezen" };
+
+  // Newcomer competitor at the default 1500, linked to the account.
+  await db
+    .insert(competitors)
+    .values({ displayName: displayName(u), userId });
   revalidatePath("/admin/competitors");
   return { ok: true };
 }
