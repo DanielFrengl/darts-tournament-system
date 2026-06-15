@@ -1,7 +1,7 @@
 {
   "tournamentName": "Jabloňová Open #2",
   "legs": "2,3,3,5",
-  "_note": "From memory: exact leg scores unknown (placeholders; Elo only uses winners). Known: 1. Bohy, 2. Jena, 3. Dan (beat Pavel), 4. Pavel; David and Singl did not advance. Reconstructed early-round eliminations: Jena beat David, Bohy beat Singl. SF pairing assumed: Bohy beat Pavel, Jena beat Dan.",
-  "groups": "Bohy,Jena,Dan,Pavel,David,Singl",
-  "scores": "Jena-David=2:1|Bohy-Singl=2:1|Bohy-Pavel=2:1|Jena-Dan=2:1|Bohy-Jena=3:2|Dan-Pavel=2:1"
+  "_note": "From memory, partial. Podium: 1. Bohy, 2. Jena, 3. Dan (beat Pavel), 4. Pavel. David did NOT advance to playoff — his confirmed group matches: lost to Pavel 2:0, lost to Volkie 2:1, beat Singl 2:1. Final/3rd confirmed; SF pairing still assumed (Bohy beat Pavel, Jena beat Dan). Leg scores in playoff are placeholders (Elo uses winners only).",
+  "groups": "Bohy,Jena,Dan,Pavel,David,Singl,Volkie",
+  "scores": "Bohy-Pavel=2:1|Jena-Dan=2:1|Bohy-Jena=3:2|Dan-Pavel=2:1|Pavel-David=2:0|Volkie-David=2:1|David-Singl=2:1"
 }
