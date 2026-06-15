@@ -35,11 +35,11 @@ export const TournamentConfigSchema = z
   .refine(
     (c) => {
       const total = c.advancePerGroup * c.groupCount;
-      return total === 2 || total === 4 || total === 8 || total === 16;
+      return total === 2 || total === 4 || total === 8;
     },
     {
       message:
-        "Celkový počet postupujících musí být 2, 4, 8 nebo 16 (mocnina dvou). " +
+        "Celkový počet postupujících musí být 2, 4 nebo 8 (mocnina dvou). " +
         "Uprav počet skupin × postupujících (např. 2×2=4, 2×4=8).",
       path: ["advancePerGroup"],
     }

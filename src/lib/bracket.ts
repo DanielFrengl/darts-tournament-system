@@ -36,8 +36,25 @@ export function seedBracket(advancers: GroupAdvancers[]): BracketMatch[] {
   const phase = PHASE_BY_REMAINING[total];
   if (!phase) throw new Error("unsupported bracket size");
 
+  if (advancers.length === 1) {
+    // Single-group format: the two qualifiers play directly in the final.
+    const only = advancers[0]!;
+    if (only.players.length !== 2) {
+      throw new Error("single-group brackets must advance exactly 2 players");
+    }
+    return [
+      {
+        phase,
+        bracketRound: 1,
+        bracketPosition: 0,
+        playerAId: only.players[0]!,
+        playerBId: only.players[1]!,
+      },
+    ];
+  }
+
   if (advancers.length !== 2 && advancers.length !== 4) {
-    throw new Error("only 2 or 4 group brackets are supported in this phase");
+    throw new Error("only 1, 2 or 4 group brackets are supported in this phase");
   }
 
   const out: BracketMatch[] = [];

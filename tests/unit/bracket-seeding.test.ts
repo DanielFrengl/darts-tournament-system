@@ -78,6 +78,74 @@ describe("seedBracket", () => {
     expect(matches[3]).toMatchObject({ playerAId: "d1", playerBId: "c2" });
   });
 
+  it("single group with 2 advancers → a direct final", () => {
+    const advancers: GroupAdvancers[] = [
+      { groupName: "A", players: ["a1", "a2"] },
+    ];
+    const matches = seedBracket(advancers);
+    expect(matches).toHaveLength(1);
+    expect(matches[0]).toMatchObject({
+      phase: "final",
+      bracketRound: 1,
+      bracketPosition: 0,
+      playerAId: "a1",
+      playerBId: "a2",
+    });
+  });
+
+  it("4 groups never pit two players from the same group against each other in round 1", () => {
+    const advancers: GroupAdvancers[] = [
+      { groupName: "A", players: ["a1", "a2"] },
+      { groupName: "B", players: ["b1", "b2"] },
+      { groupName: "C", players: ["c1", "c2"] },
+      { groupName: "D", players: ["d1", "d2"] },
+    ];
+    const groupOf = (id: string) => id[0];
+    for (const m of seedBracket(advancers)) {
+      expect(groupOf(m.playerAId)).not.toBe(groupOf(m.playerBId));
+    }
+  });
+
+  it("4 groups produce contiguous bracket positions starting at 0", () => {
+    const advancers: GroupAdvancers[] = [
+      { groupName: "A", players: ["a1", "a2"] },
+      { groupName: "B", players: ["b1", "b2"] },
+      { groupName: "C", players: ["c1", "c2"] },
+      { groupName: "D", players: ["d1", "d2"] },
+    ];
+    const positions = seedBracket(advancers)
+      .map((m) => m.bracketPosition)
+      .sort((a, b) => a - b);
+    expect(positions).toEqual([0, 1, 2, 3]);
+  });
+
+  it("throws for 4 groups advancing an unequal number of players", () => {
+    const advancers: GroupAdvancers[] = [
+      { groupName: "A", players: ["a1", "a2"] },
+      { groupName: "B", players: ["b1", "b2"] },
+      { groupName: "C", players: ["c1", "c2"] },
+      { groupName: "D", players: ["d1"] },
+    ];
+    expect(() => seedBracket(advancers)).toThrow();
+  });
+
+  it("throws for 4 groups with more than 2 advancers each (16 total unsupported)", () => {
+    const advancers: GroupAdvancers[] = ["A", "B", "C", "D"].map((g) => ({
+      groupName: g,
+      players: [`${g}1`, `${g}2`, `${g}3`, `${g}4`],
+    }));
+    expect(() => seedBracket(advancers)).toThrow();
+  });
+
+  it("throws for 3 groups", () => {
+    const advancers: GroupAdvancers[] = [
+      { groupName: "A", players: ["a1", "a2"] },
+      { groupName: "B", players: ["b1", "b2"] },
+      { groupName: "C", players: ["c1", "c2"] },
+    ];
+    expect(() => seedBracket(advancers)).toThrow();
+  });
+
   it("throws when fewer than 2 advancers", () => {
     const advancers: GroupAdvancers[] = [{ groupName: "A", players: ["only"] }];
     expect(() => seedBracket(advancers)).toThrow();
