@@ -17,6 +17,7 @@ export default async function AdminSettingsPage() {
             initialName={settings.name}
             initialLogoUrl={settings.logoUrl}
             initialInviteCode={settings.inviteCode}
+            initialMaxBet={settings.maxBet}
           />
         </CardContent>
       </Card>

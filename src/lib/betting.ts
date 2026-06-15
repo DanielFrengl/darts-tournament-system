@@ -8,6 +8,7 @@ import {
   transactions,
   users,
   tournaments,
+  appSettings,
   type Bet,
   type MarketSelection,
   type Parlay,
@@ -76,13 +77,20 @@ export class BettingService {
           .for("update");
         if (!u) throw new Error("user not found");
         const balance = Number(u.capital);
-        const maxStake = Math.floor(balance * cfg.maxStakePct * 100) / 100;
+        const pctCap = Math.floor(balance * cfg.maxStakePct * 100) / 100;
+        const [appCfg] = await tx
+          .select({ maxBet: appSettings.maxBet })
+          .from(appSettings)
+          .where(eq(appSettings.id, 1));
+        const absoluteMax = appCfg?.maxBet != null ? Number(appCfg.maxBet) : null;
+        const maxStake =
+          absoluteMax != null ? Math.min(pctCap, absoluteMax) : pctCap;
         if (stake > maxStake) {
-          throw new Error(
-            `Stake exceeds max ${maxStake.toFixed(2)} (max ${(cfg.maxStakePct * 100).toFixed(
-              0
-            )}% of capital)`
-          );
+          const reason =
+            absoluteMax != null && absoluteMax < pctCap
+              ? "table limit"
+              : `max ${(cfg.maxStakePct * 100).toFixed(0)}% of capital`;
+          throw new Error(`Stake exceeds max ${maxStake.toFixed(2)} (${reason})`);
         }
         const newBalance = (balance - stake).toFixed(2);
         await tx
@@ -281,11 +289,20 @@ export class BettingService {
           .for("update");
         if (!u) throw new Error("Uživatel neexistuje");
         const balance = Number(u.capital);
-        const maxStake = Math.floor(balance * cfg.maxStakePct * 100) / 100;
+        const pctCap = Math.floor(balance * cfg.maxStakePct * 100) / 100;
+        const [appCfg] = await tx
+          .select({ maxBet: appSettings.maxBet })
+          .from(appSettings)
+          .where(eq(appSettings.id, 1));
+        const absoluteMax = appCfg?.maxBet != null ? Number(appCfg.maxBet) : null;
+        const maxStake =
+          absoluteMax != null ? Math.min(pctCap, absoluteMax) : pctCap;
         if (stake > maxStake) {
-          throw new Error(
-            `Vklad přesahuje max ${maxStake.toFixed(2)} (${(cfg.maxStakePct * 100).toFixed(0)}% kapitálu)`
-          );
+          const reason =
+            absoluteMax != null && absoluteMax < pctCap
+              ? "limit sázky"
+              : `${(cfg.maxStakePct * 100).toFixed(0)}% kapitálu`;
+          throw new Error(`Vklad přesahuje max ${maxStake.toFixed(2)} (${reason})`);
         }
 
         // Combined odds = product of each selection's final odds.

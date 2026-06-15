@@ -1,0 +1,1 @@
+ALTER TABLE "app_settings" ADD COLUMN "max_bet" numeric(12, 2);

@@ -99,6 +99,13 @@
       "when": 1781473436782,
       "tag": "0013_wandering_ronan",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1781560000000,
+      "tag": "0014_configurable_max_bet",
+      "breakpoints": true
     }
   ]
 }

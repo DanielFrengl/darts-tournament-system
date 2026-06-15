@@ -45,6 +45,21 @@ export async function updateInviteCode(code: string): Promise<Result> {
   }
 }
 
+/**
+ * Set the absolute max stake allowed on a single bet/parlay. Pass `null`
+ * to disable the limit entirely (only the per-tournament % cap applies).
+ */
+export async function updateMaxBet(maxBet: number | null): Promise<Result> {
+  if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
+  try {
+    await updateAppSettings({ maxBet });
+    revalidatePath("/admin/settings");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
 export async function regenerateInviteCode(): Promise<Result & { code?: string }> {
   if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
   const code = randomCode();
