@@ -16,6 +16,8 @@ import {
   Tv,
   Layers,
   Gauge,
+  Dices,
+  Link2,
 } from "lucide-react";
 import { isAdmin, type Role } from "@/lib/roles";
 import { ReportBugButton } from "@/components/layout/ReportBugButton";
@@ -33,6 +35,7 @@ const sections: NavSection[] = [
       { href: "/tournament", label: "Přehled", icon: <Trophy className="h-4 w-4" /> },
       { href: "/leaderboard", label: "Žebříček", icon: <Award className="h-4 w-4" /> },
       { href: "/elo", label: "Elo hráčů", icon: <Gauge className="h-4 w-4" /> },
+      { href: "/sance", label: "Šance", icon: <Dices className="h-4 w-4" /> },
       { href: "/display", label: "TV Display", icon: <Tv className="h-4 w-4" /> },
     ],
   },
@@ -49,6 +52,7 @@ const adminItems: NavItem[] = [
   { href: "/admin", label: "Přehled", icon: <Shield className="h-4 w-4" /> },
   { href: "/admin/tournaments", label: "Turnaje", icon: <Trophy className="h-4 w-4" /> },
   { href: "/admin/users", label: "Uživatelé", icon: <Users className="h-4 w-4" /> },
+  { href: "/admin/competitors", label: "Soutěžící (Elo)", icon: <Link2 className="h-4 w-4" /> },
   { href: "/admin/audit", label: "Audit log", icon: <FileText className="h-4 w-4" /> },
   { href: "/admin/settings", label: "Nastavení", icon: <Settings className="h-4 w-4" /> },
 ];
