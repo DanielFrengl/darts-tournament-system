@@ -12,8 +12,7 @@ import {
   Cell,
   PieChart,
   Pie,
-  LineChart,
-  Line,
+  LabelList,
   Legend,
 } from "recharts";
 import { formatJablka } from "@/lib/jablka";
@@ -51,11 +50,11 @@ const METRICS: Metric[] = [
   { key: "capital", label: "Kapitál", format: "currency" },
 ];
 
-type ChartType = "bar" | "donut" | "line";
+type ChartType = "bar" | "donut" | "hbar";
 const CHART_TYPES: { key: ChartType; label: string }[] = [
   { key: "bar", label: "Sloupcový" },
   { key: "donut", label: "Kruhový" },
-  { key: "line", label: "Spojnice" },
+  { key: "hbar", label: "Vodorovný" },
 ];
 
 // 8-color palette tuned for dark backgrounds with WCAG-AA contrast.
@@ -94,7 +93,8 @@ export function LeaderboardCharts({ rows }: { rows: LeaderboardRow[] }) {
 
   const data = rows
     .map((r) => ({ name: r.displayName, value: valueOf(r, metric.key) }))
-    .sort((a, b) => b.value - a.value);
+    .sort((a, b) => b.value - a.value)
+    .map((d) => ({ ...d, label: formatValue(d.value, metric.format) }));
 
   return (
     <div className="space-y-4">
@@ -130,7 +130,14 @@ export function LeaderboardCharts({ rows }: { rows: LeaderboardRow[] }) {
           </button>
         ))}
       </div>
-      <div className="h-72 w-full sm:h-80">
+      <div
+        className={chartType === "hbar" ? "w-full" : "h-72 w-full sm:h-80"}
+        style={
+          chartType === "hbar"
+            ? { height: Math.max(220, data.length * 36 + 24) }
+            : undefined
+        }
+      >
         <ResponsiveContainer width="100%" height="100%">
           {chartType === "bar" ? (
             <BarChart data={data} margin={{ left: 12, right: 12, top: 8, bottom: 8 }}>
@@ -200,40 +207,45 @@ export function LeaderboardCharts({ rows }: { rows: LeaderboardRow[] }) {
               </Pie>
             </PieChart>
           ) : (
-            <LineChart data={data} margin={{ left: 12, right: 12, top: 8, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
+            <BarChart
+              data={data}
+              layout="vertical"
+              margin={{ left: 4, right: 52, top: 4, bottom: 4 }}
+            >
               <XAxis
+                type="number"
+                hide
+                tickFormatter={(v: number) => formatTick(v, metric.format)}
+              />
+              <YAxis
+                type="category"
                 dataKey="name"
                 stroke={AXIS}
                 fontSize={12}
-                tickLine={false}
+                width={110}
                 interval={0}
-                angle={data.length > 4 ? -20 : 0}
-                textAnchor={data.length > 4 ? "end" : "middle"}
-                height={data.length > 4 ? 56 : 30}
-              />
-              <YAxis
-                stroke={AXIS}
-                fontSize={12}
-                width={48}
-                tickFormatter={(v: number) => formatTick(v, metric.format)}
+                tickLine={false}
+                axisLine={false}
               />
               <Tooltip
-                cursor={{ stroke: "rgba(255,255,255,0.15)" }}
+                cursor={{ fill: "rgba(255,255,255,0.06)" }}
                 contentStyle={tooltipStyle}
                 labelStyle={{ color: "#e5e7eb" }}
                 itemStyle={{ color: "#e5e7eb" }}
                 formatter={(v) => formatValue(Number(v ?? 0), metric.format)}
               />
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke={PALETTE[0]}
-                strokeWidth={2}
-                dot={{ fill: PALETTE[0], r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-            </LineChart>
+              <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={18}>
+                {data.map((d) => (
+                  <Cell key={d.name} fill={d.value >= 0 ? POSITIVE : NEGATIVE} />
+                ))}
+                <LabelList
+                  dataKey="label"
+                  position="right"
+                  fill="#e5e7eb"
+                  style={{ fontSize: 11 }}
+                />
+              </Bar>
+            </BarChart>
           )}
         </ResponsiveContainer>
       </div>
