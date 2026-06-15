@@ -4,6 +4,7 @@ import {
   defaultTournamentConfig,
   TournamentCreateSchema,
 } from "@/lib/tournament-config";
+import { seedBracket, type GroupAdvancers } from "@/lib/bracket";
 
 describe("defaultTournamentConfig", () => {
   it("returns a config that passes its own schema", () => {
@@ -78,6 +79,39 @@ describe("TournamentConfigSchema", () => {
   it("rejects house_edge outside [0, 0.1]", () => {
     const cfg = { ...defaultTournamentConfig(), houseEdge: 0.2 };
     expect(TournamentConfigSchema.safeParse(cfg).success).toBe(false);
+  });
+});
+
+describe("config ↔ bracket consistency", () => {
+  // Any group config the schema accepts must produce a bracket the
+  // generator can actually seed — otherwise creation throws at runtime.
+  it("every schema-accepted group config can be seeded", () => {
+    for (let groupCount = 1; groupCount <= 8; groupCount++) {
+      for (let advancePerGroup = 1; advancePerGroup <= 4; advancePerGroup++) {
+        const cfg = {
+          ...defaultTournamentConfig(),
+          groupCount,
+          groupSize: 4,
+          advancePerGroup,
+        };
+        if (!TournamentConfigSchema.safeParse(cfg).success) continue;
+
+        const advancers: GroupAdvancers[] = Array.from(
+          { length: groupCount },
+          (_, g) => ({
+            groupName: String.fromCharCode(65 + g),
+            players: Array.from(
+              { length: advancePerGroup },
+              (_, p) => `g${g}p${p}`
+            ),
+          })
+        );
+        expect(
+          () => seedBracket(advancers),
+          `groupCount=${groupCount} advancePerGroup=${advancePerGroup}`
+        ).not.toThrow();
+      }
+    }
   });
 });
 
