@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { seedBracket, type GroupAdvancers } from "@/lib/bracket";
+import {
+  seedBracket,
+  semifinalOfQuarter,
+  type GroupAdvancers,
+} from "@/lib/bracket";
 
 describe("seedBracket", () => {
   it("4 advancers (2x2) → semifinals A1 vs B2, B1 vs A2", () => {
@@ -104,6 +108,50 @@ describe("seedBracket", () => {
     for (const m of seedBracket(advancers)) {
       expect(groupOf(m.playerAId)).not.toBe(groupOf(m.playerBId));
     }
+  });
+
+  it("4 groups: no two players from the same group can reach the same semifinal", () => {
+    // 4 groups of 3 players, top 2 advance → 8-player quarterfinal bracket.
+    const advancers: GroupAdvancers[] = [
+      { groupName: "A", players: ["a1", "a2"] },
+      { groupName: "B", players: ["b1", "b2"] },
+      { groupName: "C", players: ["c1", "c2"] },
+      { groupName: "D", players: ["d1", "d2"] },
+    ];
+    const groupOf = (id: string) => id[0];
+    const quarters = seedBracket(advancers);
+    expect(quarters).toHaveLength(4);
+
+    // Quarterfinal winners are paired into semifinals as
+    // (pos0,pos1)->semi0, (pos2,pos3)->semi1. Enumerate every possible
+    // outcome (2^4 winner combinations) and assert no semifinal ever pits
+    // two players from the same group against each other.
+    const sorted = [...quarters].sort(
+      (x, y) => x.bracketPosition - y.bracketPosition
+    );
+    for (let mask = 0; mask < 1 << sorted.length; mask++) {
+      const winners = sorted.map((m, i) =>
+        mask & (1 << i) ? m.playerAId : m.playerBId
+      );
+      const semifinals = new Map<number, string[]>();
+      sorted.forEach((m, i) => {
+        const semi = semifinalOfQuarter(m.bracketPosition);
+        const slot = semifinals.get(semi) ?? [];
+        slot.push(winners[i]!);
+        semifinals.set(semi, slot);
+      });
+      for (const players of semifinals.values()) {
+        expect(players).toHaveLength(2);
+        expect(groupOf(players[0]!)).not.toBe(groupOf(players[1]!));
+      }
+    }
+  });
+
+  it("semifinalOfQuarter maps adjacent quarterfinals to the same semifinal", () => {
+    expect(semifinalOfQuarter(0)).toBe(0);
+    expect(semifinalOfQuarter(1)).toBe(0);
+    expect(semifinalOfQuarter(2)).toBe(1);
+    expect(semifinalOfQuarter(3)).toBe(1);
   });
 
   it("4 groups produce contiguous bracket positions starting at 0", () => {

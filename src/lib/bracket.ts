@@ -21,6 +21,47 @@ const PHASE_BY_REMAINING: Record<number, Match["phase"]> = {
 };
 
 /**
+ * Quarterfinal winners are paired into semifinals by adjacent bracket
+ * position: positions 0 & 1 feed semifinal 0, positions 2 & 3 feed
+ * semifinal 1 (see {@link BracketService.advanceWinner}). So the
+ * semifinal a quarterfinal slot eventually reaches is `position / 2`.
+ */
+export const semifinalOfQuarter = (bracketPosition: number): number =>
+  Math.floor(bracketPosition / 2);
+
+/**
+ * Enforces that no group can place two of its players into the same
+ * semifinal: every quarterfinal feeding a given semifinal must belong to
+ * a distinct group. This guarantee is only achievable (and therefore only
+ * checked) when there are at least 4 groups — with 2 groups each half of
+ * an 8-player bracket unavoidably contains both groups.
+ *
+ * Acts as a structural backstop: any future change to the seeding pattern
+ * that would let group-mates meet in a semifinal fails loudly here.
+ */
+function assertSemifinalGroupSeparation(
+  bracket: BracketMatch[],
+  groupOfPlayer: Map<string, string>
+): void {
+  const groupsBySemifinal = new Map<number, Set<string>>();
+  for (const m of bracket) {
+    const semifinal = semifinalOfQuarter(m.bracketPosition);
+    const seen = groupsBySemifinal.get(semifinal) ?? new Set<string>();
+    for (const playerId of [m.playerAId, m.playerBId]) {
+      const group = groupOfPlayer.get(playerId);
+      if (group === undefined) continue;
+      if (seen.has(group)) {
+        throw new Error(
+          `seeding error: two players from group "${group}" can reach semifinal ${semifinal}`
+        );
+      }
+      seen.add(group);
+    }
+    groupsBySemifinal.set(semifinal, seen);
+  }
+}
+
+/**
  * Cross-seeded bracket generator. Builds only the first round of the
  * bracket; subsequent rounds are created when winners are advanced.
  *
@@ -79,6 +120,14 @@ export function seedBracket(advancers: GroupAdvancers[]): BracketMatch[] {
     } else {
       throw new Error("only up to 2 advancers per group are supported for 4 groups currently");
     }
+    // With >= 4 groups the seeding must keep group-mates out of the same
+    // semifinal. Enforce it structurally so a future pattern change can't
+    // silently break it.
+    const groupOfPlayer = new Map<string, string>();
+    for (const g of advancers) {
+      for (const pid of g.players) groupOfPlayer.set(pid, g.groupName);
+    }
+    assertSemifinalGroupSeparation(out, groupOfPlayer);
     return out;
   }
 
