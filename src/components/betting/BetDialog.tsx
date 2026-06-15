@@ -47,8 +47,11 @@ export function BetDialog({
   const validStake = Number.isFinite(numericStake) && numericStake > 0;
   const maxStake = maxBet != null ? Math.min(capital, maxBet) : capital;
   const potentialPayout = validStake ? numericStake * target.finalOdds : 0;
-  const overMax = validStake && numericStake > maxStake;
+  // overMax = over the absolute max-bet limit; overBalance = over capital.
+  // Kept separate so a pure capital shortfall doesn't also trip the limit
+  // error (capital takes priority in the UI below).
   const overBalance = validStake && numericStake > capital;
+  const overMax = maxBet != null && validStake && numericStake > maxBet;
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -103,12 +106,11 @@ export function BetDialog({
               <span className="font-mono font-bold">{formatJablka(potentialPayout)}</span>
             </div>
           )}
-          {overMax && (
-            <p className="text-sm text-destructive">Překračuje max sázku.</p>
-          )}
-          {overBalance && (
+          {overBalance ? (
             <p className="text-sm text-destructive">Nedostatek kapitálu.</p>
-          )}
+          ) : overMax ? (
+            <p className="text-sm text-destructive">Překračuje max sázku.</p>
+          ) : null}
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={onClose}>
               Zrušit

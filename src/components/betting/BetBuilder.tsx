@@ -293,11 +293,13 @@ export function BetBuilder({
                 {pending ? "Podávám…" : "Podat akumulátor"}
               </Button>
             </div>
-            {stakeNum > 0 && stakeNum > maxStake && (
+            {stakeNum > capital ? (
+              <p className="text-xs text-destructive">Nedostatek kapitálu.</p>
+            ) : maxBet != null && stakeNum > maxBet ? (
               <p className="text-xs text-destructive">
-                Vklad přesahuje maximum {fmt.format(maxStake)}
+                Vklad přesahuje max sázku {fmt.format(maxBet)}
               </p>
-            )}
+            ) : null}
           </CardContent>
         </Card>
       </aside>
