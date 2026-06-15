@@ -339,14 +339,16 @@ function BigMatchCard({ match }: { match: MatchListItem }) {
       {(match.oddsA != null || match.totalPool > 0) && (
         <div className="mt-4 space-y-3 border-t border-white/10 pt-3">
           <div className="flex items-center justify-between gap-6 text-sm">
-            <OddsPill name={match.playerA} odds={match.oddsA} />
-            <span className="text-xs uppercase tracking-widest text-white/40">
+            {/* Live matches have no open match-winner market, so odds are
+                blank — hide the pills entirely rather than show dashes. */}
+            {match.oddsA != null && <OddsPill name={match.playerA} odds={match.oddsA} />}
+            <span className="mx-auto text-xs uppercase tracking-widest text-white/40">
               Vsazeno{" "}
               <span className="ml-1 font-mono text-base text-white">
                 {match.totalPool > 0 ? formatJablka(match.totalPool) : "—"}
               </span>
             </span>
-            <OddsPill name={match.playerB} odds={match.oddsB} />
+            {match.oddsB != null && <OddsPill name={match.playerB} odds={match.oddsB} />}
           </div>
           {match.totalPool > 0 && (
             <PoolSplitBar
