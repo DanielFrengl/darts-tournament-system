@@ -1,4 +1,4 @@
-import { desc } from "drizzle-orm";
+import { desc, isNotNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { competitors } from "@/db/schema";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -14,6 +14,7 @@ export default async function EloPage() {
       elo: competitors.eloRating,
     })
     .from(competitors)
+    .where(isNotNull(competitors.userId))
     .orderBy(desc(competitors.eloRating));
 
   return (
@@ -29,7 +30,8 @@ export default async function EloPage() {
 
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Zatím tu nejsou žádní hráči – ratingy se objeví po importu historie.
+          Zatím tu nejsou žádní spárovaní hráči – Elo se zobrazí, jakmile
+          přiřadíš účty hráčům v adminu.
         </p>
       ) : (
         <div className="overflow-hidden rounded-xl border">
