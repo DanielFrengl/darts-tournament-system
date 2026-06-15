@@ -13,6 +13,7 @@ export type MatchListItem = {
   number: number | null;
   phaseLabel: string;
   status: "scheduled" | "live" | "finished" | "cancelled";
+  isUpcoming?: boolean;
   bestOf: number;
   playerA: string;
   playerB: string;

@@ -196,6 +196,10 @@ export const matches = pgTable(
     t20B: integer("t20_b"),
     startsAt: timestamp("starts_at", { withTimezone: true }),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
+    // When an admin pins this match as "upcoming" so it floats to the top
+    // of betting and the TV "Na řadě" list. NULL = not pinned. Cleared
+    // automatically once the match starts (leg 1).
+    markedUpcomingAt: timestamp("marked_upcoming_at", { withTimezone: true }),
   },
   (t) => ({
     tournamentIdx: index("matches_tournament_idx").on(t.tournamentId),

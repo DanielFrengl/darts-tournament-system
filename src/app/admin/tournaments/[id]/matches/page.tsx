@@ -99,6 +99,7 @@ export default async function MatchesPage({
       status: l.status,
       winnerId: l.winnerId,
     })),
+    isUpcoming: m.markedUpcomingAt != null,
     groupName: m.groupId ? groupMap.get(m.groupId)?.name ?? null : null,
     number: numberById.get(m.id)!,
   }));

@@ -48,6 +48,11 @@ export async function onMatchesCreated(matchIds: string[]): Promise<void> {
 export async function onLegStarted(legId: string, matchId: string, legNumber: number): Promise<void> {
   if (legNumber === 1) {
     await marketService.closeMatchMarkets(matchId);
+    // The match is now live — it's no longer "upcoming", so drop the pin.
+    await db
+      .update(matches)
+      .set({ markedUpcomingAt: null })
+      .where(eq(matches.id, matchId));
   }
   await marketService.createForLeg(legId);
   publish(`match:${matchId}`, "leg_started", { legId, legNumber });
