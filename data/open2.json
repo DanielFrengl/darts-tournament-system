@@ -1,7 +1,7 @@
 {
   "tournamentName": "Jabloňová Open #2",
   "legs": "2,3,3,5",
-  "_note": "From memory, partial. Podium: 1. Bohy, 2. Jena, 3. Dan (beat Pavel), 4. Pavel. SF CONFIRMED: Bohy beat Pavel 3:0, Jena beat Dan 3:2. David did NOT advance to playoff — confirmed group matches: lost to Pavel 2:0, lost to Volkie 2:1, beat Singl 2:1. Still missing: full group stage (only David's games), Volkie/Singl placement. Final leg score is a placeholder.",
+  "_note": "Bracket confirmed from photo (Jablonova Open 04_26 sheet). Zadra = David. Group A: Pavel 1, Singl 2, Volkie 3, David 4. Group B: Jéňa 1 (won group on leg diff despite Bohy beating him 2:1 head-to-head), Bohy 2, Dan 3, Matyáš 4. Group winners (Jéňa, Pavel) seeded to SF. Předkolo: Bohy(B2)>Volkie(A3), Dan(B3)>Singl(A2). SF: Bohy>Pavel, Jéňa>Dan. o3: Dan>Pavel. Finále: Bohy>Jéňa. Group A's 3 unrecorded matches (Pavel>Volkie, Pavel>Singl, Singl>Volkie) inferred from standings — sheet cells were blank. Leg margins are placeholders (Elo uses winner only).",
   "groups": "Bohy,Jena,Dan,Matyáš|Pavel,David,Volkie,Singl",
-  "scores": "Dan-Matyáš=2:1|Jena-Dan=2:1|Bohy-Dan=2:0|Bohy-Jena=2:1|Jena-Matyáš=2:0|Matyáš-Bohy=2:1|Pavel-David=2:0|Volkie-David=2:1|David-Singl=2:1|Bohy-Pavel=3:0|Jena-Dan=3:2|Bohy-Jena=3:2|Dan-Pavel=2:1"
+  "scores": "Dan-Matyáš=2:1|Jena-Dan=2:1|Bohy-Dan=2:0|Bohy-Jena=2:1|Jena-Matyáš=2:0|Matyáš-Bohy=2:1|Pavel-David=2:0|Volkie-David=2:1|David-Singl=2:1|Pavel-Volkie=2:0|Pavel-Singl=2:0|Singl-Volkie=2:1|Bohy-Volkie=2:1|Dan-Singl=2:1|Bohy-Pavel=3:0|Jena-Dan=3:2|Bohy-Jena=3:2|Dan-Pavel=2:1"
 }
