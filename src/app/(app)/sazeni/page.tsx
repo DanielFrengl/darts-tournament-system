@@ -144,6 +144,8 @@ async function buildBettingSurfaces(tournamentId: string): Promise<{
     label: string;
     sublabel: string | null;
     sortKey: number;
+    upcomingAt: number;
+    isUpcoming: boolean;
     matchId: string | null;
     singleMarkets: MarketCardVM[];
     builderMarkets: BuilderMarketVM[];
@@ -160,6 +162,8 @@ async function buildBettingSurfaces(tournamentId: string): Promise<{
     let sortKey: number;
     let marketTitle: string;
     let groupMatchId: string | null = null;
+    let isUpcoming = false;
+    let upcomingAt = 0;
 
     if (m.matchId) {
       const match = matchById.get(m.matchId);
@@ -169,7 +173,10 @@ async function buildBettingSurfaces(tournamentId: string): Promise<{
       groupKey = `match:${match.id}`;
       label = `${a} vs ${b}`;
       sublabel = PHASE_LABEL[match.phase] ?? match.phase;
-      sortKey = match.status === "live" ? 0 : 1;
+      isUpcoming = match.markedUpcomingAt != null;
+      upcomingAt = match.markedUpcomingAt ? match.markedUpcomingAt.getTime() : 0;
+      // Pinned-upcoming (-1) above live (0) above scheduled (1).
+      sortKey = isUpcoming ? -1 : match.status === "live" ? 0 : 1;
       groupMatchId = match.id;
       const legNum = m.legId ? legNumberById.get(m.legId) ?? 0 : 0;
       marketTitle =
@@ -191,6 +198,8 @@ async function buildBettingSurfaces(tournamentId: string): Promise<{
         label,
         sublabel,
         sortKey,
+        upcomingAt,
+        isUpcoming,
         matchId: groupMatchId,
         singleMarkets: [],
         builderMarkets: [],
@@ -227,7 +236,10 @@ async function buildBettingSurfaces(tournamentId: string): Promise<{
   }
 
   const ordered = [...groupsMap.values()].sort(
-    (a, b) => a.sortKey - b.sortKey || a.label.localeCompare(b.label, "cs")
+    (a, b) =>
+      a.sortKey - b.sortKey ||
+      b.upcomingAt - a.upcomingAt ||
+      a.label.localeCompare(b.label, "cs")
   );
 
   return {
@@ -235,6 +247,7 @@ async function buildBettingSurfaces(tournamentId: string): Promise<{
       key: g.key,
       label: g.label,
       sublabel: g.sublabel,
+      isUpcoming: g.isUpcoming,
       matchId: g.matchId,
       markets: g.singleMarkets,
     })),

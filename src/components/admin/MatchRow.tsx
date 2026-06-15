@@ -11,6 +11,7 @@ import {
   recordLegAction,
   cancelMatchAction,
   undoLastLegAction,
+  markUpcomingAction,
 } from "@/app/admin/tournaments/[id]/matches/actions";
 
 // Localized labels so the admin runner matches the Czech UI used everywhere
@@ -46,6 +47,7 @@ export type Match = {
   playerB: Player | null;
   winnerId: string | null;
   legs: Leg[];
+  isUpcoming: boolean;
 };
 
 export function MatchRow({
@@ -102,6 +104,20 @@ export function MatchRow({
       const r = await undoLastLegAction(tournamentId, match.id);
       if (r.ok) {
         toast.success("Poslední leg vrácen — zadej správného vítěze");
+        router.refresh();
+      } else {
+        toast.error(r.error);
+      }
+    });
+  }
+
+  function toggleUpcoming() {
+    start(async () => {
+      const r = await markUpcomingAction(tournamentId, match.id, !match.isUpcoming);
+      if (r.ok) {
+        toast.success(
+          match.isUpcoming ? "Označení zrušeno" : "Zápas označen jako nadcházející"
+        );
         router.refresh();
       } else {
         toast.error(r.error);
@@ -179,13 +195,26 @@ export function MatchRow({
           )}
           <Badge variant="outline">{PHASE_LABEL[match.phase] ?? match.phase}</Badge>
           <StatusBadge kind="match" status={match.status} />
+          {match.isUpcoming && <Badge>Nadcházející</Badge>}
           <span className="text-muted-foreground">best of {match.bestOf}</span>
         </div>
-        {!isFinished && match.status !== "cancelled" && (
-          <Button size="sm" variant="ghost" disabled={pending} onClick={cancelClick}>
-            Zrušit
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {match.status === "scheduled" && (
+            <Button
+              size="sm"
+              variant={match.isUpcoming ? "secondary" : "outline"}
+              disabled={pending}
+              onClick={toggleUpcoming}
+            >
+              {match.isUpcoming ? "Zrušit nadcházející" : "Označit jako nadcházející"}
+            </Button>
+          )}
+          {!isFinished && match.status !== "cancelled" && (
+            <Button size="sm" variant="ghost" disabled={pending} onClick={cancelClick}>
+              Zrušit
+            </Button>
+          )}
+        </div>
       </div>
       <div className="flex items-center justify-center gap-4 text-lg">
         <span className={match.winnerId === match.playerA?.id ? "font-bold" : ""}>{nameA}</span>

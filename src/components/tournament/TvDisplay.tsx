@@ -462,9 +462,22 @@ function GroupTableTv({ group }: { group: GroupView }) {
 
 function NextUpCard({ match }: { match: MatchListItem }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+    <div
+      className={`rounded-xl border p-3 ${
+        match.isUpcoming
+          ? "border-amber-400/60 bg-amber-400/10 ring-1 ring-amber-400/40"
+          : "border-white/10 bg-white/5"
+      }`}
+    >
       <div className="flex items-center justify-between text-xs text-white/50">
-        <span>#{match.number}</span>
+        <span className="flex items-center gap-1.5">
+          #{match.number}
+          {match.isUpcoming && (
+            <span className="rounded bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-black">
+              Nadcházející
+            </span>
+          )}
+        </span>
         <span>
           {match.phaseLabel} · bo{match.bestOf}
         </span>
