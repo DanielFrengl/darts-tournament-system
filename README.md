@@ -13,7 +13,7 @@ runs on a single laptop or a free Railway dyno.
 **For players**
 - Register with first + last name and an invite code; the username is
   auto-slugged from the name and used only for `/u/{username}` URLs.
-- Capital is denominated in **Chips** and resets at the start of every
+- Capital is denominated in **jablka** and resets at the start of every
   tournament — every event starts on a level playing field; all-time
   net profit lives in the audit log and the leaderboard.
 - **Sázení** (`/sazeni`) is one page with two modes:
@@ -32,6 +32,9 @@ runs on a single laptop or a free Railway dyno.
   switchable bar / donut / line charts.
 - `/u/{username}` shows the player's profile with current-tournament
   and all-time betting stats side by side.
+- `/elo` lists every competitor by carried ELO (strength across events).
+- **Nahlásit chybu** button in the sidebar sends a bug report (text +
+  who / which page / when) straight to a Discord webhook.
 
 **For the admin**
 - Tournament wizard is automated end-to-end: configure → add players →
@@ -92,6 +95,33 @@ Any loss → bust. Any refund → the whole parlay is refunded.
 ELO ratings update after each match (`K = 32`) so subsequent rounds
 re-price using the latest numbers.
 
+**Tournament-winner / place futures** (`tournament_winner`, `runner_up`,
+`third`) are priced by a **Monte Carlo simulation** (`lib/tournament-sim.ts`):
+the whole event (groups → bracket) is simulated ~10 000× from player ELO,
+and each player's win / runner-up / third frequency becomes their
+probability (replacing the old uniform `1/N`). The admin `/admin/tournaments/[id]/odds-viz`
+page visualises win-probability, convergence, phase-reach and placement
+distribution.
+
+## Cross-tournament ratings & history import
+
+Player strength persists across events via a **`competitors`** table
+(canonical `eloRating`); each per-tournament `players` row links to a
+competitor (`competitorId`) and is seeded from it. On tournament finish,
+the working ELO is written back to the competitor.
+
+- **Import past tournaments** from the "Jabloňová Open" export format
+  (`{ groups, scores: "A-B=2:0" }`) and replay ELO chronologically:
+  `npm run import-tournaments data/open1.json data/open2.json … [+Newcomer]`.
+  Trailing `+Name` args seed pure newcomers at 1500.
+- **Manual override** — admins can set a competitor's ELO in
+  `/admin/competitors`; it is **locked** (`eloLocked`) so re-imports
+  don't overwrite it (unlock to recompute).
+- **Roster** — add existing competitors (seeded ELO) or newcomers to a
+  tournament from `/admin/tournaments/[id]/players`.
+- **Public read views**: `/elo` (live player-strength table) and
+  `/info` (link-only, `noindex` announcement page).
+
 ## Tech stack
 
 - **Next.js 16** (App Router, RSC, server actions) + **React 19**
@@ -125,6 +155,8 @@ docker compose up -d   # darts @ :5432, darts_test @ :5433
 # 3. Env
 cp .env.example .env
 echo "AUTH_SECRET=\"$(openssl rand -base64 32)\"" >> .env
+# Optional: route "Nahlásit chybu" reports to Discord
+# echo 'DISCORD_BUG_WEBHOOK_URL="https://discord.com/api/webhooks/…"' >> .env
 
 # 4. Migrations
 npm run db:migrate
@@ -165,7 +197,7 @@ src/
 │   ├── tournament/               ← BracketView (full scaffold + LIVE glow), MatchListCard, GroupTable, TvDisplay
 │   ├── betting/                  ← MarketCard, BetDialog, BetBuilder, SazeniSurface (mode toggle), BetsByMatch
 │   ├── admin/                    ← TournamentControls, TournamentAdminActions, AdvancePerGroupFix, PlayerManager, MatchRow, SystemSettingsForm, WizardNav
-│   ├── user/                     ← CapitalDisplay (Chips), ProfileCard, ProfileStats, AvatarUpload
+│   ├── user/                     ← CapitalDisplay (jablka), ProfileCard, ProfileStats, AvatarUpload
 │   └── leaderboard/              ← LeaderboardCharts (bar / donut / line)
 ├── lib/
 │   ├── tournament.ts             ← TournamentService (create, rename, delete, status transitions)
@@ -179,6 +211,11 @@ src/
 │   ├── capital.ts                ← CapitalService (atomic debit/credit + transactions audit)
 │   ├── odds.ts                   ← pure odds math (binomial correct-score, parimutuel, blend)
 │   ├── elo.ts                    ← ELO win-probability + rating updates
+│   ├── tournament-sim.ts         ← pure Monte Carlo tournament simulation (futures odds)
+│   ├── rating-replay.ts          ← replay ELO over an ordered match list
+│   ├── import-format.ts          ← parser for the Jabloňová Open export JSON
+│   ├── competitor.ts             ← seed from competitor, finish writeback, account link, elo override/lock
+│   ├── bug-report.ts             ← format a bug report for the Discord webhook
 │   ├── names.ts                  ← displayName helper + slug username generator
 │   ├── user-stats.ts             ← shared betting stats (scoped or all-time)
 │   ├── settings.ts               ← app_settings singleton + invite verification
@@ -186,10 +223,11 @@ src/
 │   ├── use-live.ts               ← React hook over SSE
 │   └── tournament-views.ts       ← server-only DB → component VMs
 └── db/
-    ├── schema.ts                 ← users (+ first/last name), transactions, tournaments,
-    │                               groups, players, matches, legs, markets, market_selections,
+    ├── schema.ts                 ← users (+ first/last name), competitors (+ eloLocked),
+    │                               transactions, tournaments, groups, players (+ competitorId),
+    │                               matches, legs, markets, market_selections,
     │                               bets (+ parlay_id), parlays, app_settings
-    └── migrations/               ← 0000…0010 (latest: parlays)
+    └── migrations/               ← 0000…0013 (latest: competitors.eloLocked)
 ```
 
 ## Testing
