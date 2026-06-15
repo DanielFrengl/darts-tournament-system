@@ -12,6 +12,7 @@ import {
   cancelMatchAction,
   undoLastLegAction,
   markUpcomingAction,
+  closeLegBettingAction,
 } from "@/app/admin/tournaments/[id]/matches/actions";
 
 // Localized labels so the admin runner matches the Czech UI used everywhere
@@ -35,6 +36,8 @@ type Leg = {
   legNumber: number;
   status: "pending" | "live" | "finished";
   winnerId: string | null;
+  /** Whether the leg_winner market is still open for bets (live leg only). */
+  bettingClosed?: boolean;
 };
 export type Match = {
   id: string;
@@ -90,6 +93,19 @@ export function MatchRow({
     start(async () => {
       const r = await recordLegAction(tournamentId, liveLeg.id, winnerId);
       if (r.ok) {
+        router.refresh();
+      } else {
+        toast.error(r.error);
+      }
+    });
+  }
+
+  function closeBettingClick() {
+    if (!liveLeg) return;
+    start(async () => {
+      const r = await closeLegBettingAction(tournamentId, liveLeg.id);
+      if (r.ok) {
+        toast.success("Sázky na leg uzavřeny");
         router.refresh();
       } else {
         toast.error(r.error);
@@ -232,7 +248,21 @@ export function MatchRow({
         <div className="space-y-2">
           {liveLeg ? (
             <div>
-              <p className="text-sm text-muted-foreground">Leg {liveLeg.legNumber} běží — kdo vyhrál?</p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm text-muted-foreground">Leg {liveLeg.legNumber} běží — kdo vyhrál?</p>
+                {liveLeg.bettingClosed ? (
+                  <Badge variant="secondary">Sázky uzavřeny</Badge>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={pending}
+                    onClick={closeBettingClick}
+                  >
+                    Uzavřít sázky na leg
+                  </Button>
+                )}
+              </div>
               <div className="mt-2 flex gap-2">
                 {match.playerA && (
                   <Button disabled={pending} onClick={() => recordWinner(match.playerA!.id)}>

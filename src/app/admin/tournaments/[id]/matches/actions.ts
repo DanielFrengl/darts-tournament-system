@@ -11,7 +11,7 @@ import {
   startLegWithMarkets,
   undoLastLegWithMarkets,
 } from "@/lib/leg";
-import { restoreMatch } from "@/lib/match-lifecycle";
+import { restoreMatch, closeLegBetting } from "@/lib/match-lifecycle";
 import { publish } from "@/lib/event-bus";
 import { isAdmin } from "@/lib/roles";
 
@@ -104,6 +104,28 @@ export async function undoLastLegAction(
     revalidatePath(`/admin/tournaments/${tournamentId}/matches`);
     revalidatePath(`/admin/tournaments/${tournamentId}/play`);
     revalidatePath("/tournament");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
+/**
+ * Close betting on the live leg early (anti-sniping) — without recording a
+ * winner yet. Settlement still happens when the winner is recorded.
+ */
+export async function closeLegBettingAction(
+  tournamentId: string,
+  legId: string
+): Promise<Result> {
+  if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
+  try {
+    await closeLegBetting(legId);
+    revalidatePath(`/admin/tournaments/${tournamentId}/matches`);
+    revalidatePath(`/admin/tournaments/${tournamentId}/play`);
+    revalidatePath("/tournament");
+    revalidatePath("/sazeni");
+    revalidatePath("/display");
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Failed" };

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import { asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
-import { matches, legs, players, groups } from "@/db/schema";
+import { matches, legs, markets, players, groups } from "@/db/schema";
 import { tournamentService } from "@/lib/tournament";
 import { MatchRow, type Match as MatchVM } from "@/components/admin/MatchRow";
 import { CancelledMatchesCard } from "@/components/admin/CancelledMatchesCard";
@@ -66,6 +66,20 @@ export default async function MatchesPage({
     legsByMatch.set(l.matchId, arr);
   }
 
+  // Is the leg_winner market still open for each live leg? Drives the
+  // "Uzavřít sázky na leg" control.
+  const liveLegIds = allLegs.filter((l) => l.status === "live").map((l) => l.id);
+  const legWinnerMarkets = liveLegIds.length
+    ? await db
+        .select({ legId: markets.legId, status: markets.status })
+        .from(markets)
+        .where(and(inArray(markets.legId, liveLegIds), eq(markets.type, "leg_winner")))
+    : [];
+  const legBettingClosed = new Map<string, boolean>();
+  for (const mk of legWinnerMarkets) {
+    if (mk.legId) legBettingClosed.set(mk.legId, mk.status !== "open");
+  }
+
   // Global play order
   const sorted = [...allMatches].sort((a, b) => {
     const phase = (PHASE_ORDER[a.phase] ?? 99) - (PHASE_ORDER[b.phase] ?? 99);
@@ -99,6 +113,7 @@ export default async function MatchesPage({
       legNumber: l.legNumber,
       status: l.status,
       winnerId: l.winnerId,
+      bettingClosed: l.status === "live" ? legBettingClosed.get(l.id) ?? false : undefined,
     })),
     isUpcoming: m.markedUpcomingAt != null,
     groupName: m.groupId ? groupMap.get(m.groupId)?.name ?? null : null,

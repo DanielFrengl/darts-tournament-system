@@ -337,6 +337,22 @@ export async function restoreMatch(matchId: string): Promise<void> {
   publish(`tournament:${m.tournamentId}`, "match_restored", { matchId, summary });
 }
 
+/**
+ * Manually close betting on the current leg before its result is recorded.
+ * Lets the scorer lock the leg_winner market the moment a player steps up
+ * for a checkout, killing last-second sniping. Only closes the market —
+ * settlement still happens normally when the leg winner is recorded
+ * (settleLegMarket accepts already-closed markets).
+ */
+export async function closeLegBetting(legId: string): Promise<void> {
+  await marketService.closeLegMarket(legId);
+  const [leg] = await db.select().from(legs).where(eq(legs.id, legId));
+  if (!leg) return;
+  publish(`match:${leg.matchId}`, "leg_betting_closed", { legId });
+  const [m] = await db.select().from(matches).where(eq(matches.id, leg.matchId));
+  if (m) publish(`tournament:${m.tournamentId}`, "leg_betting_closed", { legId });
+}
+
 export async function onMatchCancelled(matchId: string): Promise<void> {
   const ids = await marketService.cancelMatchMarkets(matchId);
   await bettingService.refundSelections(ids);

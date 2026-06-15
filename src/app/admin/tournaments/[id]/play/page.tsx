@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { db } from "@/db/client";
-import { matches, legs, players, groups } from "@/db/schema";
+import { matches, legs, markets, players, groups } from "@/db/schema";
 import { tournamentService } from "@/lib/tournament";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -93,6 +93,19 @@ export default async function PlayPage({
     legsByMatch.set(l.matchId, arr);
   }
 
+  // leg_winner market status for live legs → drives "Uzavřít sázky na leg".
+  const liveLegIds = allLegs.filter((l) => l.status === "live").map((l) => l.id);
+  const legWinnerMarkets = liveLegIds.length
+    ? await db
+        .select({ legId: markets.legId, status: markets.status })
+        .from(markets)
+        .where(and(inArray(markets.legId, liveLegIds), eq(markets.type, "leg_winner")))
+    : [];
+  const legBettingClosed = new Map<string, boolean>();
+  for (const mk of legWinnerMarkets) {
+    if (mk.legId) legBettingClosed.set(mk.legId, mk.status !== "open");
+  }
+
   // Sort by play order: phase → group position → bracket round → bracket position.
   const groupPos = new Map(groupRows.map((g) => [g.id, g.position]));
   const sorted = [...allMatches].sort((a, b) => {
@@ -142,6 +155,7 @@ export default async function PlayPage({
       legNumber: l.legNumber,
       status: l.status,
       winnerId: l.winnerId,
+      bettingClosed: l.status === "live" ? legBettingClosed.get(l.id) ?? false : undefined,
     })),
     isUpcoming: focused.markedUpcomingAt != null,
     groupName: focused.groupId ? groupMap.get(focused.groupId)?.name ?? null : null,
