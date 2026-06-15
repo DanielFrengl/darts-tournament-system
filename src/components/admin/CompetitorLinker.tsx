@@ -1,12 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { linkAction, recomputeOddsAction } from "@/app/admin/competitors/actions";
+import {
+  linkAction,
+  recomputeOddsAction,
+  setEloAction,
+  unlockEloAction,
+} from "@/app/admin/competitors/actions";
 
 interface CompetitorRow {
   id: string;
   displayName: string;
   eloRating: number;
+  eloLocked: boolean;
   userId: string | null;
   linkedUsername: string | null;
 }
@@ -68,8 +74,49 @@ export function CompetitorLinker({
                 <td className="px-4 py-3 font-medium text-slate-100">
                   {c.displayName}
                 </td>
-                <td className="px-4 py-3 tabular-nums text-slate-300">
-                  {c.eloRating}
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <form
+                      action={async (fd) => {
+                        const res = await setEloAction(fd);
+                        if (!res.ok) setMsg(res.error);
+                      }}
+                      className="flex items-center gap-1.5"
+                    >
+                      <input type="hidden" name="competitorId" value={c.id} />
+                      <input
+                        name="elo"
+                        type="number"
+                        defaultValue={c.eloRating}
+                        min={0}
+                        max={4000}
+                        className="w-20 rounded-md border border-slate-700 bg-slate-900 px-2 py-1 tabular-nums text-slate-200"
+                      />
+                      <button
+                        type="submit"
+                        className="rounded-md bg-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-900 hover:bg-white"
+                      >
+                        Uložit
+                      </button>
+                    </form>
+                    {c.eloLocked && (
+                      <form
+                        action={async (fd) => {
+                          const res = await unlockEloAction(fd);
+                          if (!res.ok) setMsg(res.error);
+                        }}
+                      >
+                        <input type="hidden" name="competitorId" value={c.id} />
+                        <button
+                          type="submit"
+                          title="Ručně zamčeno – odemknout pro přepočet z importu"
+                          className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs text-amber-300 hover:bg-amber-500/20"
+                        >
+                          🔒 odemknout
+                        </button>
+                      </form>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   {c.userId ? (
