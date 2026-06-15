@@ -2,6 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   bets,
+  legs,
   markets,
   marketSelections,
   matches,
@@ -302,6 +303,38 @@ async function clawbackPayout(
   if (newBalance !== null) {
     publish(`user:${userId}`, "capital_changed", { balance: newBalance });
   }
+}
+
+/**
+ * Undo an accidental cancellation: put the match back to "scheduled" and
+ * re-open its pre-match markets so people can bet again. Only supported for
+ * matches that hadn't been played yet (no legs) — restoring a match that had
+ * real play would need score/leg/settlement reconstruction we don't do.
+ */
+export async function restoreMatch(matchId: string): Promise<void> {
+  const [m] = await db.select().from(matches).where(eq(matches.id, matchId));
+  if (!m) throw new Error("Zápas nenalezen");
+  if (m.status !== "cancelled") throw new Error("Vrátit lze jen zrušený zápas");
+  const legRows = await db.select().from(legs).where(eq(legs.matchId, matchId));
+  if (legRows.length > 0) {
+    throw new Error("Zápas už měl rozehrané legy — vrácení není podporováno");
+  }
+
+  await db
+    .update(matches)
+    .set({ status: "scheduled", finishedAt: null, scoreA: 0, scoreB: 0, winnerId: null })
+    .where(eq(matches.id, matchId));
+
+  // Re-open the markets cancelled on cancellation; if none exist (e.g. the
+  // match was cancelled before its markets were ever created), make them.
+  const reopened = await marketService.reopenMatchMarkets(matchId);
+  if (reopened === 0) {
+    await marketService.createForMatch(matchId);
+  }
+
+  publish(`match:${matchId}`, "restored");
+  const summary = await buildMatchSummary(matchId);
+  publish(`tournament:${m.tournamentId}`, "match_restored", { matchId, summary });
 }
 
 export async function onMatchCancelled(matchId: string): Promise<void> {

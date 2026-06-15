@@ -4,6 +4,7 @@ import { db } from "@/db/client";
 import { matches, legs, players, groups } from "@/db/schema";
 import { tournamentService } from "@/lib/tournament";
 import { MatchRow, type Match as MatchVM } from "@/components/admin/MatchRow";
+import { CancelledMatchesCard } from "@/components/admin/CancelledMatchesCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WizardNav } from "@/components/admin/WizardNav";
 import { LiveDot } from "@/components/ui/live-dot";
@@ -104,7 +105,20 @@ export default async function MatchesPage({
     number: numberById.get(m.id)!,
   }));
 
-  const groupMatches = vms.filter((m) => m.phase === "group");
+  // Cancelled matches are pulled out into their own card (with a restore
+  // button) instead of sitting as dead rows in the group/playoff lists.
+  const active = vms.filter((m) => m.status !== "cancelled");
+  const cancelled = vms
+    .filter((m) => m.status === "cancelled")
+    .map((m) => ({
+      id: m.id,
+      number: m.number,
+      phaseLabel: labelPhase(m.phase),
+      playerA: m.playerA?.name ?? "?",
+      playerB: m.playerB?.name ?? "?",
+    }));
+
+  const groupMatches = active.filter((m) => m.phase === "group");
   const groupedByGroup = new Map<string, typeof groupMatches>();
   for (const m of groupMatches) {
     const key = m.groupName ?? "?";
@@ -114,9 +128,9 @@ export default async function MatchesPage({
   }
 
   const playoffPhases = ["quarter", "semi", "third_place", "final"] as const;
-  const playoffByPhase = new Map<string, typeof vms>();
+  const playoffByPhase = new Map<string, typeof active>();
   for (const phase of playoffPhases) {
-    const arr = vms.filter((m) => m.phase === phase);
+    const arr = active.filter((m) => m.phase === phase);
     if (arr.length > 0) playoffByPhase.set(phase, arr);
   }
 
@@ -165,6 +179,7 @@ export default async function MatchesPage({
           </CardContent>
         </Card>
       ))}
+      <CancelledMatchesCard tournamentId={id} matches={cancelled} />
       {vms.length === 0 && (
         <p className="text-muted-foreground">Žádné zápasy. Nejprve spusť skupinovou fázi.</p>
       )}
@@ -174,6 +189,8 @@ export default async function MatchesPage({
 
 function labelPhase(phase: string): string {
   switch (phase) {
+    case "group":
+      return "Skupina";
     case "quarter":
       return "Čtvrtfinále";
     case "semi":

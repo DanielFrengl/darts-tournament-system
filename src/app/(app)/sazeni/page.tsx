@@ -146,6 +146,7 @@ async function buildBettingSurfaces(tournamentId: string): Promise<{
     sortKey: number;
     upcomingAt: number;
     isUpcoming: boolean;
+    isLive: boolean;
     matchId: string | null;
     singleMarkets: MarketCardVM[];
     builderMarkets: BuilderMarketVM[];
@@ -163,6 +164,7 @@ async function buildBettingSurfaces(tournamentId: string): Promise<{
     let marketTitle: string;
     let groupMatchId: string | null = null;
     let isUpcoming = false;
+    let isLive = false;
     let upcomingAt = 0;
 
     if (m.matchId) {
@@ -173,10 +175,12 @@ async function buildBettingSurfaces(tournamentId: string): Promise<{
       groupKey = `match:${match.id}`;
       label = `${a} vs ${b}`;
       sublabel = PHASE_LABEL[match.phase] ?? match.phase;
-      isUpcoming = match.markedUpcomingAt != null;
+      isLive = match.status === "live";
+      isUpcoming = !isLive && match.markedUpcomingAt != null;
       upcomingAt = match.markedUpcomingAt ? match.markedUpcomingAt.getTime() : 0;
-      // Pinned-upcoming (-1) above live (0) above scheduled (1).
-      sortKey = isUpcoming ? -1 : match.status === "live" ? 0 : 1;
+      // Live/in-progress (-2) on top, then pinned-upcoming (-1), then the
+      // rest (1); whole-tournament markets last (2).
+      sortKey = isLive ? -2 : isUpcoming ? -1 : 1;
       groupMatchId = match.id;
       const legNum = m.legId ? legNumberById.get(m.legId) ?? 0 : 0;
       marketTitle =
@@ -200,6 +204,7 @@ async function buildBettingSurfaces(tournamentId: string): Promise<{
         sortKey,
         upcomingAt,
         isUpcoming,
+        isLive,
         matchId: groupMatchId,
         singleMarkets: [],
         builderMarkets: [],
@@ -248,6 +253,7 @@ async function buildBettingSurfaces(tournamentId: string): Promise<{
       label: g.label,
       sublabel: g.sublabel,
       isUpcoming: g.isUpcoming,
+      isLive: g.isLive,
       matchId: g.matchId,
       markets: g.singleMarkets,
     })),

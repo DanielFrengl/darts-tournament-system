@@ -11,6 +11,7 @@ import {
   startLegWithMarkets,
   undoLastLegWithMarkets,
 } from "@/lib/leg";
+import { restoreMatch } from "@/lib/match-lifecycle";
 import { publish } from "@/lib/event-bus";
 import { isAdmin } from "@/lib/roles";
 
@@ -119,6 +120,28 @@ export async function cancelMatchAction(
     revalidatePath(`/admin/tournaments/${tournamentId}/matches`);
     revalidatePath(`/admin/tournaments/${tournamentId}/play`);
     revalidatePath("/tournament");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
+/**
+ * Undo an accidental cancellation: put the match back to "scheduled" and
+ * re-open its betting markets. Only works for matches that hadn't started.
+ */
+export async function restoreMatchAction(
+  tournamentId: string,
+  matchId: string
+): Promise<Result> {
+  if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
+  try {
+    await restoreMatch(matchId);
+    revalidatePath(`/admin/tournaments/${tournamentId}/matches`);
+    revalidatePath(`/admin/tournaments/${tournamentId}/play`);
+    revalidatePath("/tournament");
+    revalidatePath("/sazeni");
+    revalidatePath("/display");
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Failed" };

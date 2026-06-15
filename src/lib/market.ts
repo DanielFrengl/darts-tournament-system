@@ -550,6 +550,32 @@ export class MarketService {
     return selectionIds;
   }
 
+  /**
+   * Re-open the pre-match markets (match_winner + correct_score) that were
+   * cancelled — used when an accidentally cancelled match is restored.
+   * Only scope="match" markets are touched (leg markets stay as-is).
+   * Returns how many markets were reopened.
+   */
+  async reopenMatchMarkets(matchId: string): Promise<number> {
+    const ms = await this.db
+      .select()
+      .from(markets)
+      .where(
+        and(
+          eq(markets.matchId, matchId),
+          eq(markets.scope, "match"),
+          eq(markets.status, "cancelled")
+        )
+      );
+    for (const m of ms) {
+      await this.db
+        .update(markets)
+        .set({ status: "open", closesAt: null, settledAt: null })
+        .where(eq(markets.id, m.id));
+    }
+    return ms.length;
+  }
+
   private async insertMarket(
     market: typeof markets.$inferInsert,
     selections: SelectionDraft[],
