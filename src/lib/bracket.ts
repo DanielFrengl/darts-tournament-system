@@ -36,16 +36,41 @@ export function seedBracket(advancers: GroupAdvancers[]): BracketMatch[] {
   const phase = PHASE_BY_REMAINING[total];
   if (!phase) throw new Error("unsupported bracket size");
 
-  if (advancers.length !== 2) {
-    throw new Error("only 2-group brackets are supported in this phase");
+  if (advancers.length !== 2 && advancers.length !== 4) {
+    throw new Error("only 2 or 4 group brackets are supported in this phase");
   }
+
+  const out: BracketMatch[] = [];
+
+  if (advancers.length === 4) {
+    const [a, b, c, d] = advancers;
+    const perGroup = a!.players.length;
+    if (b!.players.length !== perGroup || c!.players.length !== perGroup || d!.players.length !== perGroup) {
+      throw new Error("groups must advance the same number of players");
+    }
+
+    if (perGroup === 1) {
+      // 4 advancers (semi)
+      out.push({ phase, bracketRound: 1, bracketPosition: 0, playerAId: a!.players[0]!, playerBId: c!.players[0]! });
+      out.push({ phase, bracketRound: 1, bracketPosition: 1, playerAId: b!.players[0]!, playerBId: d!.players[0]! });
+    } else if (perGroup === 2) {
+      // 8 advancers (quarter)
+      out.push({ phase, bracketRound: 1, bracketPosition: 0, playerAId: a!.players[0]!, playerBId: b!.players[1]! });
+      out.push({ phase, bracketRound: 1, bracketPosition: 1, playerAId: c!.players[0]!, playerBId: d!.players[1]! });
+      out.push({ phase, bracketRound: 1, bracketPosition: 2, playerAId: b!.players[0]!, playerBId: a!.players[1]! });
+      out.push({ phase, bracketRound: 1, bracketPosition: 3, playerAId: d!.players[0]!, playerBId: c!.players[1]! });
+    } else {
+      throw new Error("only up to 2 advancers per group are supported for 4 groups currently");
+    }
+    return out;
+  }
+
   const [a, b] = advancers as [GroupAdvancers, GroupAdvancers];
   const perGroup = a.players.length;
   if (b.players.length !== perGroup) {
     throw new Error("groups must advance the same number of players");
   }
 
-  const out: BracketMatch[] = [];
   const half = Math.ceil(perGroup / 2);
   for (let i = 0; i < half; i++) {
     const aSeed = a.players[i]!;

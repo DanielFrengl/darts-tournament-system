@@ -43,8 +43,23 @@ describe("TournamentConfigSchema", () => {
     expect(TournamentConfigSchema.safeParse(cfg).success).toBe(false);
   });
 
-  it("rejects total advancing < 2", () => {
-    const cfg = { ...defaultTournamentConfig(), groupCount: 1, advancePerGroup: 1 };
+  it("accepts 4 groups with 1 advancing (4 total -> semi)", () => {
+    const cfg = { ...defaultTournamentConfig(), groupCount: 4, groupSize: 4, advancePerGroup: 1 };
+    expect(TournamentConfigSchema.safeParse(cfg).success).toBe(true);
+  });
+
+  it("accepts 4 groups with 2 advancing (8 total -> quarter)", () => {
+    const cfg = { ...defaultTournamentConfig(), groupCount: 4, groupSize: 4, advancePerGroup: 2 };
+    expect(TournamentConfigSchema.safeParse(cfg).success).toBe(true);
+  });
+
+  it("rejects 4 groups with 4 advancing (16 total -> unsupported)", () => {
+    const cfg = { ...defaultTournamentConfig(), groupCount: 4, groupSize: 4, advancePerGroup: 4 };
+    expect(TournamentConfigSchema.safeParse(cfg).success).toBe(false);
+  });
+
+  it("rejects 3 groups", () => {
+    const cfg = { ...defaultTournamentConfig(), groupCount: 3, advancePerGroup: 2 };
     expect(TournamentConfigSchema.safeParse(cfg).success).toBe(false);
   });
 

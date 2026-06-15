@@ -44,8 +44,8 @@ export const TournamentConfigSchema = z
       path: ["advancePerGroup"],
     }
   )
-  .refine((c) => c.groupCount === 2 || c.advancePerGroup * c.groupCount === 2, {
-    message: "Aktuálně podporujeme jen 2 skupiny v playoffu",
+  .refine((c) => c.groupCount === 2 || c.groupCount === 4 || c.advancePerGroup * c.groupCount === 2, {
+    message: "Aktuálně podporujeme 2 nebo 4 skupiny v playoffu",
     path: ["groupCount"],
   });
 
