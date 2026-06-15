@@ -13,23 +13,54 @@ import {
   updateSystemLogo,
   updateInviteCode,
   regenerateInviteCode,
+  updateMaxBet,
 } from "@/app/admin/settings/actions";
 
 export function SystemSettingsForm({
   initialName,
   initialLogoUrl,
   initialInviteCode,
+  initialMaxBet,
 }: {
   initialName: string;
   initialLogoUrl: string;
   initialInviteCode: string;
+  initialMaxBet: string | null;
 }) {
   const router = useRouter();
   const [name, setName] = useState(initialName);
   const [logoUrl, setLogoUrl] = useState(initialLogoUrl);
   const [inviteCode, setInviteCode] = useState(initialInviteCode);
+  const [limitEnabled, setLimitEnabled] = useState(initialMaxBet !== null);
+  const [maxBet, setMaxBet] = useState(
+    initialMaxBet !== null ? String(Number(initialMaxBet)) : ""
+  );
   const [pendingName, startName] = useTransition();
   const [pendingInvite, startInvite] = useTransition();
+  const [pendingMaxBet, startMaxBet] = useTransition();
+
+  function saveMaxBet(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    let value: number | null = null;
+    if (limitEnabled) {
+      value = Number(maxBet);
+      if (!Number.isFinite(value) || value <= 0) {
+        toast.error("Zadej kladné číslo");
+        return;
+      }
+    }
+    startMaxBet(async () => {
+      const r = await updateMaxBet(value);
+      if (r.ok) {
+        toast.success(
+          value === null ? "Limit sázky vypnut" : `Limit sázky nastaven na ${value}`
+        );
+        router.refresh();
+      } else {
+        toast.error(r.error);
+      }
+    });
+  }
 
   function saveName(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -171,6 +202,39 @@ export function SystemSettingsForm({
         <p className="text-xs text-muted-foreground">
           Bez tohoto kódu se nikdo nedostane na přihlášení ani registraci.
           Změna kódu nevypne existující uživatele.
+        </p>
+      </form>
+
+      <form onSubmit={saveMaxBet} className="space-y-3 border-t pt-6">
+        <Label htmlFor="max-bet">Maximální sázka</Label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={limitEnabled}
+            onChange={(e) => setLimitEnabled(e.target.checked)}
+            className="h-4 w-4 accent-primary"
+          />
+          Omezit maximální výši jedné sázky / tiketu
+        </label>
+        <div className="flex gap-2">
+          <Input
+            id="max-bet"
+            type="number"
+            min={1}
+            step="0.01"
+            value={maxBet}
+            onChange={(e) => setMaxBet(e.target.value)}
+            disabled={!limitEnabled}
+            placeholder={limitEnabled ? "např. 500" : "Bez limitu"}
+            className="flex-1"
+          />
+          <Button type="submit" disabled={pendingMaxBet}>
+            {pendingMaxBet ? "Ukládám…" : "Uložit"}
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Absolutní horní hranice vkladu na jednu sázku i tiket (v jablkách). Když
+          je vypnutá, platí jen procentní limit z kapitálu nastavený u turnaje.
         </p>
       </form>
 

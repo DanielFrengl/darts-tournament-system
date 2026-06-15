@@ -9,6 +9,7 @@ const DEFAULTS: Omit<AppSettings, "updatedAt"> = {
   name: "Jabloňová Open",
   logoUrl: "/logo.png",
   inviteCode: "darts",
+  maxBet: null,
 };
 
 /**
@@ -34,6 +35,7 @@ export async function updateAppSettings(input: {
   name?: string;
   logoUrl?: string;
   inviteCode?: string;
+  maxBet?: number | null;
 }): Promise<void> {
   const patch: Partial<typeof appSettings.$inferInsert> = { updatedAt: new Date() };
   if (input.name !== undefined) {
@@ -49,6 +51,17 @@ export async function updateAppSettings(input: {
     if (trimmed.length < 3) throw new Error("invite code must be at least 3 chars");
     if (trimmed.length > 64) throw new Error("invite code too long");
     patch.inviteCode = trimmed;
+  }
+  if (input.maxBet !== undefined) {
+    if (input.maxBet === null) {
+      patch.maxBet = null; // limit disabled
+    } else {
+      if (!Number.isFinite(input.maxBet) || input.maxBet <= 0) {
+        throw new Error("max bet must be a positive number");
+      }
+      if (input.maxBet > 1_000_000_000) throw new Error("max bet too large");
+      patch.maxBet = input.maxBet.toFixed(2);
+    }
   }
   await db
     .insert(appSettings)
