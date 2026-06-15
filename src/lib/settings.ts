@@ -69,6 +69,12 @@ export async function updateAppSettings(input: {
     .onConflictDoUpdate({ target: appSettings.id, set: patch });
 }
 
+/** Absolute max stake per bet/parlay (in jablka), or null when disabled. */
+export async function getMaxBet(): Promise<number | null> {
+  const s = await getAppSettings();
+  return s.maxBet != null ? Number(s.maxBet) : null;
+}
+
 export async function verifyInviteCode(code: string): Promise<boolean> {
   const settings = await getAppSettings();
   // Constant-time-ish compare for the small string; full timing safety

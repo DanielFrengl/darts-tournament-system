@@ -13,6 +13,7 @@ import {
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { tournamentService } from "@/lib/tournament";
+import { getMaxBet } from "@/lib/settings";
 import {
   type BuilderGroupVM,
   type BuilderMarketVM,
@@ -53,6 +54,7 @@ export default async function SazeniPage() {
     .from(users)
     .where(eq(users.id, session.user.id));
   const capital = Number(me?.capital ?? 0);
+  const maxBet = await getMaxBet();
 
   const surfaces = t
     ? await buildBettingSurfaces(t.id)
@@ -77,7 +79,7 @@ export default async function SazeniPage() {
           singleGroups={surfaces.singleGroups}
           builderGroups={surfaces.builderGroups}
           capital={capital}
-          maxStakePct={t.configJson.maxStakePct}
+          maxBet={maxBet}
         />
       )}
     </div>

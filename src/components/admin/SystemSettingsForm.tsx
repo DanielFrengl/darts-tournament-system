@@ -234,7 +234,7 @@ export function SystemSettingsForm({
         </div>
         <p className="text-xs text-muted-foreground">
           Absolutní horní hranice vkladu na jednu sázku i tiket (v jablkách). Když
-          je vypnutá, platí jen procentní limit z kapitálu nastavený u turnaje.
+          je vypnutá, jediným stropem je vlastní kapitál sázejícího.
         </p>
       </form>
 

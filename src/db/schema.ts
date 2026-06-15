@@ -337,8 +337,8 @@ export const appSettings = pgTable("app_settings", {
   name: varchar("name", { length: 100 }).notNull().default("Jabloňová Open"),
   logoUrl: text("logo_url").notNull().default("/logo.png"),
   inviteCode: varchar("invite_code", { length: 64 }).notNull().default("darts"),
-  // Absolute upper bound on a single bet/parlay stake. NULL = no absolute
-  // limit (only the per-tournament maxStakePct cap applies).
+  // Absolute upper bound on a single bet/parlay stake. NULL = no limit
+  // (the only cap is the bettor's own capital).
   maxBet: numeric("max_bet", { precision: 12, scale: 2 }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

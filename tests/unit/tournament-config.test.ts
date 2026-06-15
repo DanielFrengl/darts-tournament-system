@@ -69,13 +69,6 @@ describe("TournamentConfigSchema", () => {
     expect(TournamentConfigSchema.safeParse(cfg).success).toBe(false);
   });
 
-  it("rejects max_stake_pct outside (0,1]", () => {
-    const cfg1 = { ...defaultTournamentConfig(), maxStakePct: 0 };
-    const cfg2 = { ...defaultTournamentConfig(), maxStakePct: 1.5 };
-    expect(TournamentConfigSchema.safeParse(cfg1).success).toBe(false);
-    expect(TournamentConfigSchema.safeParse(cfg2).success).toBe(false);
-  });
-
   it("rejects house_edge outside [0, 0.1]", () => {
     const cfg = { ...defaultTournamentConfig(), houseEdge: 0.2 };
     expect(TournamentConfigSchema.safeParse(cfg).success).toBe(false);

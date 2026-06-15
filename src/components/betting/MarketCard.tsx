@@ -28,13 +28,13 @@ export function MarketCard({
   market,
   matchId,
   capital,
-  maxStakePct,
+  maxBet,
   canBet,
 }: {
   market: MarketCardVM;
   matchId: string;
   capital: number;
-  maxStakePct: number;
+  maxBet: number | null;
   canBet: boolean;
 }) {
   const [target, setTarget] = useState<BetTarget | null>(null);
@@ -110,7 +110,7 @@ export function MarketCard({
         matchId={matchId}
         target={target}
         capital={capital}
-        maxStakePct={maxStakePct}
+        maxBet={maxBet}
         onClose={() => setTarget(null)}
       />
     </>

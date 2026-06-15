@@ -15,6 +15,7 @@ import {
 import { auth } from "@/lib/auth";
 import { marketService } from "@/lib/market";
 import { tournamentService } from "@/lib/tournament";
+import { getMaxBet } from "@/lib/settings";
 import {
   buildGroupViews,
   buildBracketMatches,
@@ -67,7 +68,7 @@ export default async function TournamentOverviewPage() {
     (m) => m.status === "finished" || m.status === "cancelled"
   );
 
-  const maxStakePct = t.configJson.maxStakePct;
+  const maxBet = await getMaxBet();
 
   return (
     <div className="space-y-6">
@@ -97,7 +98,7 @@ export default async function TournamentOverviewPage() {
                 key={m.id}
                 match={m}
                 capital={capital}
-                maxStakePct={maxStakePct}
+                maxBet={maxBet}
                 canBet={capital > 0}
               />
             ))}
@@ -114,7 +115,7 @@ export default async function TournamentOverviewPage() {
                 key={m.id}
                 match={m}
                 capital={capital}
-                maxStakePct={maxStakePct}
+                maxBet={maxBet}
                 canBet={capital > 0}
               />
             ))}
@@ -157,7 +158,7 @@ export default async function TournamentOverviewPage() {
                 market={vm}
                 matchId={""}
                 capital={capital}
-                maxStakePct={maxStakePct}
+                maxBet={maxBet}
                 canBet={vm.status === "open" && capital > 0}
               />
             ))}
@@ -174,7 +175,7 @@ export default async function TournamentOverviewPage() {
                 key={m.id}
                 match={m}
                 capital={capital}
-                maxStakePct={maxStakePct}
+                maxBet={maxBet}
                 canBet={false}
               />
             ))}

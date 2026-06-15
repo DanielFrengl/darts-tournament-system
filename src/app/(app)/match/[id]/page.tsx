@@ -15,7 +15,7 @@ import {
   tournaments,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import type { TournamentConfig } from "@/lib/tournament-config";
+import { getMaxBet } from "@/lib/settings";
 import {
   MarketCard,
   type MarketCardVM,
@@ -45,7 +45,7 @@ export default async function MatchDetailPage({
     .from(tournaments)
     .where(eq(tournaments.id, match.tournamentId));
   if (!t) notFound();
-  const cfg = t.configJson as TournamentConfig;
+  const maxBet = await getMaxBet();
 
   const [me] = await db
     .select({ capital: users.capital })
@@ -171,7 +171,7 @@ export default async function MatchDetailPage({
                     market={vm}
                     matchId={id}
                     capital={Number(me?.capital ?? 0)}
-                    maxStakePct={cfg.maxStakePct}
+                    maxBet={maxBet}
                     canBet={match.status !== "cancelled"}
                   />
                 ))}
@@ -187,7 +187,7 @@ export default async function MatchDetailPage({
                     market={vm}
                     matchId={id}
                     capital={Number(me?.capital ?? 0)}
-                    maxStakePct={cfg.maxStakePct}
+                    maxBet={maxBet}
                     canBet={match.status !== "cancelled"}
                   />
                 ))}
@@ -203,7 +203,7 @@ export default async function MatchDetailPage({
                     market={vm}
                     matchId={id}
                     capital={Number(me?.capital ?? 0)}
-                    maxStakePct={cfg.maxStakePct}
+                    maxBet={maxBet}
                     canBet={match.status !== "cancelled"}
                   />
                 ))}
@@ -222,7 +222,7 @@ export default async function MatchDetailPage({
                     market={vm}
                     matchId={id}
                     capital={Number(me?.capital ?? 0)}
-                    maxStakePct={cfg.maxStakePct}
+                    maxBet={maxBet}
                     canBet={match.status !== "cancelled"}
                   />
                 ))}

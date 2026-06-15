@@ -32,12 +32,12 @@ export type MatchListItem = {
 export function MatchListCard({
   match,
   capital,
-  maxStakePct,
+  maxBet,
   canBet,
 }: {
   match: MatchListItem;
   capital: number;
-  maxStakePct: number;
+  maxBet: number | null;
   canBet: boolean;
 }) {
   const [target, setTarget] = useState<BetTarget | null>(null);
@@ -190,7 +190,7 @@ export function MatchListCard({
         matchId={match.id}
         target={target}
         capital={capital}
-        maxStakePct={maxStakePct}
+        maxBet={maxBet}
         onClose={() => setTarget(null)}
       />
     </>

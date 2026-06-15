@@ -7,7 +7,6 @@ import {
   parlays,
   transactions,
   users,
-  tournaments,
   appSettings,
   type Bet,
   type MarketSelection,
@@ -16,7 +15,6 @@ import {
 import type { DB } from "@/db/client";
 import { CapitalService } from "@/lib/capital";
 import { MarketService } from "@/lib/market";
-import type { TournamentConfig } from "@/lib/tournament-config";
 import { publish } from "@/lib/event-bus";
 
 export type PlaceBetResult =
@@ -63,13 +61,6 @@ export class BettingService {
         if (market.status !== "open") {
           throw new Error("market is not open");
         }
-        const [t] = await tx
-          .select()
-          .from(tournaments)
-          .where(eq(tournaments.id, market.tournamentId));
-        if (!t) throw new Error("tournament not found");
-        const cfg = t.configJson as TournamentConfig;
-
         const [u] = await tx
           .select({ capital: users.capital })
           .from(users)
@@ -77,20 +68,14 @@ export class BettingService {
           .for("update");
         if (!u) throw new Error("user not found");
         const balance = Number(u.capital);
-        const pctCap = Math.floor(balance * cfg.maxStakePct * 100) / 100;
+        if (stake > balance) throw new Error("Insufficient capital");
         const [appCfg] = await tx
           .select({ maxBet: appSettings.maxBet })
           .from(appSettings)
           .where(eq(appSettings.id, 1));
         const absoluteMax = appCfg?.maxBet != null ? Number(appCfg.maxBet) : null;
-        const maxStake =
-          absoluteMax != null ? Math.min(pctCap, absoluteMax) : pctCap;
-        if (stake > maxStake) {
-          const reason =
-            absoluteMax != null && absoluteMax < pctCap
-              ? "table limit"
-              : `max ${(cfg.maxStakePct * 100).toFixed(0)}% of capital`;
-          throw new Error(`Stake exceeds max ${maxStake.toFixed(2)} (${reason})`);
+        if (absoluteMax != null && stake > absoluteMax) {
+          throw new Error(`Stake exceeds max bet ${absoluteMax.toFixed(2)}`);
         }
         const newBalance = (balance - stake).toFixed(2);
         await tx
@@ -230,7 +215,7 @@ export class BettingService {
    *   - 2..10 selections
    *   - All selections must belong to different markets
    *   - All markets must be currently open
-   *   - User must have stake worth of capital, capped at maxStakePct
+   *   - Stake must fit within capital and the app-wide max bet (if set)
    */
   async placeParlay(
     userId: string,
@@ -274,14 +259,6 @@ export class BettingService {
             throw new Error("Některý trh už není otevřený");
           }
         }
-        const tournamentId = ms[0]!.tournamentId;
-        const [t] = await tx
-          .select()
-          .from(tournaments)
-          .where(eq(tournaments.id, tournamentId));
-        if (!t) throw new Error("Turnaj nenalezen");
-        const cfg = t.configJson as TournamentConfig;
-
         const [u] = await tx
           .select({ capital: users.capital })
           .from(users)
@@ -289,20 +266,14 @@ export class BettingService {
           .for("update");
         if (!u) throw new Error("Uživatel neexistuje");
         const balance = Number(u.capital);
-        const pctCap = Math.floor(balance * cfg.maxStakePct * 100) / 100;
+        if (stake > balance) throw new Error("Nedostatek kapitálu");
         const [appCfg] = await tx
           .select({ maxBet: appSettings.maxBet })
           .from(appSettings)
           .where(eq(appSettings.id, 1));
         const absoluteMax = appCfg?.maxBet != null ? Number(appCfg.maxBet) : null;
-        const maxStake =
-          absoluteMax != null ? Math.min(pctCap, absoluteMax) : pctCap;
-        if (stake > maxStake) {
-          const reason =
-            absoluteMax != null && absoluteMax < pctCap
-              ? "limit sázky"
-              : `${(cfg.maxStakePct * 100).toFixed(0)}% kapitálu`;
-          throw new Error(`Vklad přesahuje max ${maxStake.toFixed(2)} (${reason})`);
+        if (absoluteMax != null && stake > absoluteMax) {
+          throw new Error(`Vklad přesahuje max sázku ${absoluteMax.toFixed(2)}`);
         }
 
         // Combined odds = product of each selection's final odds.

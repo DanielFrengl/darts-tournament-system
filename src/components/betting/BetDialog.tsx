@@ -28,13 +28,14 @@ export function BetDialog({
   matchId,
   target,
   capital,
-  maxStakePct,
+  maxBet,
   onClose,
 }: {
   matchId: string;
   target: BetTarget | null;
   capital: number;
-  maxStakePct: number;
+  /** App-wide max stake per bet, or null when no limit is set. */
+  maxBet: number | null;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -44,7 +45,7 @@ export function BetDialog({
 
   const numericStake = Number(stake);
   const validStake = Number.isFinite(numericStake) && numericStake > 0;
-  const maxStake = Math.floor(capital * maxStakePct * 100) / 100;
+  const maxStake = maxBet != null ? Math.min(capital, maxBet) : capital;
   const potentialPayout = validStake ? numericStake * target.finalOdds : 0;
   const overMax = validStake && numericStake > maxStake;
   const overBalance = validStake && numericStake > capital;
@@ -92,7 +93,8 @@ export function BetDialog({
               required
             />
             <p className="text-xs text-muted-foreground">
-              Kapitál: {formatJablka(capital)} · max: {formatJablka(maxStake)}
+              Kapitál: {formatJablka(capital)}
+              {maxBet != null && <> · max sázka: {formatJablka(maxBet)}</>}
             </p>
           </div>
           {validStake && (

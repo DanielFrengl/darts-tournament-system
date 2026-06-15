@@ -47,11 +47,12 @@ const fmt = new Intl.NumberFormat("cs-CZ", {
 export function BetBuilder({
   groups,
   capital,
-  maxStakePct,
+  maxBet,
 }: {
   groups: BuilderGroupVM[];
   capital: number;
-  maxStakePct: number;
+  /** App-wide max stake per ticket, or null when no limit is set. */
+  maxBet: number | null;
 }) {
   const router = useRouter();
   const [slip, setSlip] = useState<SlipEntry[]>([]);
@@ -91,7 +92,7 @@ export function BetBuilder({
 
   const combinedOdds = slip.reduce((acc, s) => acc * s.odds, 1);
   const stakeNum = Number(stake) || 0;
-  const maxStake = Math.floor(capital * maxStakePct * 100) / 100;
+  const maxStake = maxBet != null ? Math.min(capital, maxBet) : capital;
   const potential = stakeNum > 0 ? stakeNum * combinedOdds : 0;
 
   const canSubmit =
@@ -258,8 +259,8 @@ export function BetBuilder({
                 placeholder={`max ${fmt.format(maxStake)}`}
               />
               <p className="text-xs text-muted-foreground">
-                Kapitál: {formatJablka(capital)} · max sázka{" "}
-                {fmt.format(maxStake)} ({(maxStakePct * 100).toFixed(0)}%)
+                Kapitál: {formatJablka(capital)}
+                {maxBet != null && <> · max sázka {fmt.format(maxBet)}</>}
               </p>
             </div>
 

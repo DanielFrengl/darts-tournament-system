@@ -11,6 +11,7 @@ import { bets, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { displayName } from "@/lib/names";
 import { tournamentService } from "@/lib/tournament";
+import { getMaxBet } from "@/lib/settings";
 import { buildMatchList } from "@/lib/tournament-views";
 import { userStats } from "@/lib/user-stats";
 import { MatchListCard } from "@/components/tournament/MatchListCard";
@@ -68,6 +69,7 @@ export default async function DashboardPage() {
   const winRate = settledCount > 0 ? Number(wonCount) / settledCount : null;
 
   const t = await tournamentService.getActive();
+  const maxBet = await getMaxBet();
 
   const stats = (
     <PersonalStats
@@ -136,7 +138,7 @@ export default async function DashboardPage() {
                     key={m.id}
                     match={m}
                     capital={capital}
-                    maxStakePct={t.configJson.maxStakePct}
+                    maxBet={maxBet}
                     canBet={capital > 0}
                   />
                 ))}

@@ -24,12 +24,12 @@ export function SazeniSurface({
   singleGroups,
   builderGroups,
   capital,
-  maxStakePct,
+  maxBet,
 }: {
   singleGroups: SingleGroupVM[];
   builderGroups: BuilderGroupVM[];
   capital: number;
-  maxStakePct: number;
+  maxBet: number | null;
 }) {
   const [mode, setMode] = useState<Mode>("single");
 
@@ -71,13 +71,13 @@ export function SazeniSurface({
         <SingleBetView
           groups={singleGroups}
           capital={capital}
-          maxStakePct={maxStakePct}
+          maxBet={maxBet}
         />
       ) : (
         <BetBuilder
           groups={builderGroups}
           capital={capital}
-          maxStakePct={maxStakePct}
+          maxBet={maxBet}
         />
       )}
     </div>
@@ -87,11 +87,11 @@ export function SazeniSurface({
 function SingleBetView({
   groups,
   capital,
-  maxStakePct,
+  maxBet,
 }: {
   groups: SingleGroupVM[];
   capital: number;
-  maxStakePct: number;
+  maxBet: number | null;
 }) {
   if (groups.length === 0) {
     return (
@@ -131,7 +131,7 @@ function SingleBetView({
                 market={m}
                 matchId={g.matchId ?? ""}
                 capital={capital}
-                maxStakePct={maxStakePct}
+                maxBet={maxBet}
                 canBet
               />
             ))}

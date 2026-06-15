@@ -39,7 +39,6 @@ const CONFIG = {
   thirdPlaceMatch: false,
   crossSeedingPattern: "standard",
   startingCapital: 1000,
-  maxStakePct: 0.5,
   parimutuelThreshold: 5000,
   houseEdge: 0,
   totalLegsLineDelta: 0.5,
