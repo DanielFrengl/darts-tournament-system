@@ -132,6 +132,11 @@ function LeaderboardTable({ rows }: { rows: FullRow[] }) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   });
+  // The table is ranked by capital (net profit as a tiebreaker), even though
+  // the chart above keeps its profit ordering.
+  const sorted = [...rows].sort(
+    (a, b) => b.capital - a.capital || b.netProfit - a.netProfit
+  );
   return (
     <div className="-mx-2 overflow-x-auto sm:mx-0">
       <Table className="min-w-[640px]">
@@ -150,7 +155,7 @@ function LeaderboardTable({ rows }: { rows: FullRow[] }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((r, i) => (
+          {sorted.map((r, i) => (
             <TableRow key={r.userId}>
               <TableCell className="font-mono">{i + 1}</TableCell>
               <TableCell>
