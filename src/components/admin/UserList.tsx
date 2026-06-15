@@ -20,6 +20,7 @@ import {
 } from "@/app/admin/users/actions";
 import type { Role } from "@/lib/roles";
 import { jablkaWord } from "@/lib/jablka";
+import { UserLink } from "@/components/user/UserLink";
 import { CapitalAdjustDialog } from "./CapitalAdjustDialog";
 
 export type AdminUser = {
@@ -144,9 +145,11 @@ export function UserList({
         <TableBody>
           {users.map((u) => (
             <TableRow key={u.id}>
-              <TableCell className="font-medium">{u.displayName}</TableCell>
+              <TableCell className="font-medium">
+                <UserLink username={u.username}>{u.displayName}</UserLink>
+              </TableCell>
               <TableCell className="font-mono text-xs text-muted-foreground">
-                @{u.username}
+                <UserLink username={u.username}>@{u.username}</UserLink>
               </TableCell>
               <TableCell className="text-muted-foreground">{u.email}</TableCell>
               <TableCell>

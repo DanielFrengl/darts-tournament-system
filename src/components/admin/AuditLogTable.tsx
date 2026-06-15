@@ -7,6 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { UserLink } from "@/components/user/UserLink";
 
 export type AuditRow = {
   id: string;
@@ -42,7 +43,9 @@ export function AuditLogTable({ rows }: { rows: AuditRow[] }) {
         {rows.map((r) => (
           <TableRow key={r.id}>
             <TableCell className="whitespace-nowrap">{dt.format(r.createdAt)}</TableCell>
-            <TableCell>{r.username}</TableCell>
+            <TableCell>
+              <UserLink username={r.username}>{r.username}</UserLink>
+            </TableCell>
             <TableCell>
               <Badge variant="outline">{r.type}</Badge>
             </TableCell>
@@ -52,7 +55,13 @@ export function AuditLogTable({ rows }: { rows: AuditRow[] }) {
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">{r.note ?? "—"}</TableCell>
             <TableCell className="text-sm text-muted-foreground">
-              {r.createdByUsername ?? "—"}
+              {r.createdByUsername ? (
+                <UserLink username={r.createdByUsername}>
+                  {r.createdByUsername}
+                </UserLink>
+              ) : (
+                "—"
+              )}
             </TableCell>
           </TableRow>
         ))}

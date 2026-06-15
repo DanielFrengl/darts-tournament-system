@@ -8,6 +8,7 @@ import {
   unlockEloAction,
   createNewcomerForUserAction,
 } from "@/app/admin/competitors/actions";
+import { UserLink } from "@/components/user/UserLink";
 
 interface CompetitorRow {
   id: string;
@@ -156,9 +157,12 @@ export function CompetitorLinker({
                 </td>
                 <td className="px-4 py-3">
                   {c.userId ? (
-                    <span className="text-emerald-400">
+                    <UserLink
+                      username={c.linkedUsername}
+                      className="text-emerald-400"
+                    >
                       @{c.linkedUsername}
-                    </span>
+                    </UserLink>
                   ) : (
                     <form
                       action={async (fd) => {
