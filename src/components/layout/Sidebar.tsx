@@ -18,6 +18,7 @@ import {
   Gauge,
 } from "lucide-react";
 import { isAdmin, type Role } from "@/lib/roles";
+import { ReportBugButton } from "@/components/layout/ReportBugButton";
 
 type NavItem = { href: string; label: string; icon: ReactNode };
 type NavSection = { title?: string; items: NavItem[] };
@@ -64,7 +65,7 @@ export function SidebarNav({
   onNavigate?: () => void;
 }) {
   return (
-    <div className="flex h-full flex-col gap-2 p-4">
+    <div className="flex h-full min-h-0 flex-col gap-2 overflow-y-auto p-4">
       <Link href="/" onClick={onNavigate} className="mb-4 flex items-center gap-2">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -104,16 +105,19 @@ export function SidebarNav({
         </>
       )}
 
-      <p className="mt-auto px-2 pt-4 text-[10px] text-muted-foreground/60">
-        Made by danielfrengl
-      </p>
+      <div className="mt-auto pt-4">
+        <ReportBugButton />
+        <p className="px-2 pt-2 text-[10px] text-muted-foreground/60">
+          Made by danielfrengl · v. 1.0.0
+        </p>
+      </div>
     </div>
   );
 }
 
 export function Sidebar(props: { role: Role; systemName: string; logoUrl: string }) {
   return (
-    <aside className="hidden w-56 shrink-0 border-r bg-card md:flex md:flex-col">
+    <aside className="sticky top-0 hidden h-screen w-56 shrink-0 border-r bg-card md:flex md:flex-col">
       <SidebarNav {...props} />
     </aside>
   );
