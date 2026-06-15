@@ -12,6 +12,7 @@ export type SingleGroupVM = {
   key: string;
   label: string;
   sublabel: string | null;
+  isUpcoming?: boolean;
   matchId: string | null;
   markets: MarketCardVM[];
 };
@@ -105,6 +106,11 @@ function SingleBetView({
       {groups.map((g) => (
         <section key={g.key} className="space-y-3">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b pb-2">
+            {g.isUpcoming && (
+              <span className="rounded bg-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary-foreground">
+                Nadcházející
+              </span>
+            )}
             <h2 className="text-base font-semibold">{g.label}</h2>
             {g.sublabel && (
               <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">

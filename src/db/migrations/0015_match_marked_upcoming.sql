@@ -1,0 +1,1 @@
+ALTER TABLE "matches" ADD COLUMN "marked_upcoming_at" timestamp with time zone;

@@ -143,6 +143,7 @@ export default async function PlayPage({
       status: l.status,
       winnerId: l.winnerId,
     })),
+    isUpcoming: focused.markedUpcomingAt != null,
     groupName: focused.groupId ? groupMap.get(focused.groupId)?.name ?? null : null,
     number: focusedIndex + 1,
   };

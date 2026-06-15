@@ -206,6 +206,15 @@ export async function buildMatchList(tournamentId: string): Promise<MatchListIte
   }
 
   const sorted = [...all].sort((a, b) => {
+    // Admin-pinned "upcoming" matches float to the very top, most recently
+    // pinned first.
+    const aUp = a.markedUpcomingAt ? a.markedUpcomingAt.getTime() : null;
+    const bUp = b.markedUpcomingAt ? b.markedUpcomingAt.getTime() : null;
+    if (aUp !== bUp) {
+      if (aUp == null) return 1;
+      if (bUp == null) return -1;
+      return bUp - aUp;
+    }
     const phaseDiff = (PHASE_ORDER[a.phase] ?? 99) - (PHASE_ORDER[b.phase] ?? 99);
     if (phaseDiff !== 0) return phaseDiff;
     if (a.groupId && b.groupId) {
@@ -228,6 +237,7 @@ export async function buildMatchList(tournamentId: string): Promise<MatchListIte
       number: idx + 1,
       phaseLabel: PHASE_LABEL[m.phase] ?? m.phase,
       status: m.status,
+      isUpcoming: m.markedUpcomingAt != null,
       bestOf: m.bestOf,
       playerA: m.playerAId ? nameById.get(m.playerAId) ?? "?" : "?",
       playerB: m.playerBId ? nameById.get(m.playerBId) ?? "?" : "?",
