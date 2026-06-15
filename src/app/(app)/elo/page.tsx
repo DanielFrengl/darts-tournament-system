@@ -1,7 +1,8 @@
-import { desc, isNotNull } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { competitors } from "@/db/schema";
+import { competitors, users } from "@/db/schema";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { EloChart } from "@/components/elo/EloChart";
 
 export const metadata = {
   title: "Elo hráčů",
@@ -10,11 +11,11 @@ export const metadata = {
 export default async function EloPage() {
   const rows = await db
     .select({
-      name: competitors.displayName,
+      name: users.username,
       elo: competitors.eloRating,
     })
     .from(competitors)
-    .where(isNotNull(competitors.userId))
+    .innerJoin(users, eq(competitors.userId, users.id))
     .orderBy(desc(competitors.eloRating));
 
   return (
@@ -34,6 +35,8 @@ export default async function EloPage() {
           přiřadíš účty hráčům v adminu.
         </p>
       ) : (
+        <>
+        <EloChart rows={rows} />
         <div className="overflow-hidden rounded-xl border">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
@@ -58,6 +61,7 @@ export default async function EloPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );
