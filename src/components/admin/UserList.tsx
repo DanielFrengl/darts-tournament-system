@@ -22,6 +22,7 @@ import type { Role } from "@/lib/roles";
 import { jablkaWord } from "@/lib/jablka";
 import { UserLink } from "@/components/user/UserLink";
 import { CapitalAdjustDialog } from "./CapitalAdjustDialog";
+import { SetPasswordDialog } from "./SetPasswordDialog";
 
 export type AdminUser = {
   id: string;
@@ -43,6 +44,7 @@ export function UserList({
 }) {
   const router = useRouter();
   const [adjustingUser, setAdjustingUser] = useState<AdminUser | null>(null);
+  const [passwordUser, setPasswordUser] = useState<AdminUser | null>(null);
   const [pending, start] = useTransition();
 
   async function onToggleRole(user: AdminUser) {
@@ -189,6 +191,16 @@ export function UserList({
                   <Button
                     size="sm"
                     variant="ghost"
+                    disabled={pending}
+                    onClick={() => setPasswordUser(u)}
+                  >
+                    Změnit heslo
+                  </Button>
+                )}
+                {canDebug && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
                     disabled={u.id === currentUserId || pending}
                     onClick={() => onDeleteUser(u)}
                     className="text-destructive hover:bg-destructive/10 hover:text-destructive"
@@ -207,6 +219,16 @@ export function UserList({
           onClose={() => setAdjustingUser(null)}
           onDone={() => {
             setAdjustingUser(null);
+            router.refresh();
+          }}
+        />
+      )}
+      {passwordUser && (
+        <SetPasswordDialog
+          user={passwordUser}
+          onClose={() => setPasswordUser(null)}
+          onDone={() => {
+            setPasswordUser(null);
             router.refresh();
           }}
         />

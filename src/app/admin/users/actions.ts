@@ -6,7 +6,8 @@ import { db } from "@/db/client";
 import { users, bets, parlays, transactions, players } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { capitalService } from "@/lib/capital";
-import { CapitalAdjustSchema } from "@/lib/validation";
+import { hashPassword } from "@/lib/password";
+import { CapitalAdjustSchema, AdminPasswordSetSchema } from "@/lib/validation";
 import { isAdmin, isDebug, type Role } from "@/lib/roles";
 import { defaultTournamentConfig } from "@/lib/tournament-config";
 
@@ -115,6 +116,43 @@ export async function deleteUser(targetUserId: string): Promise<Result> {
       ok: false,
       error:
         err instanceof Error ? `Smazání selhalo: ${err.message}` : "Smazání selhalo",
+    };
+  }
+}
+
+/**
+ * DEBUG-ONLY: set a user's password directly — account recovery for when
+ * someone forgets their password. No current password is required, so this
+ * grants the ability to impersonate the account; restricted to debug users.
+ */
+export async function setUserPassword(
+  targetUserId: string,
+  newPassword: string,
+  explicitAdminId?: string
+): Promise<Result> {
+  const debugId = await requireDebugId(explicitAdminId);
+  if (!debugId) return { ok: false, error: "Forbidden" };
+  const parsed = AdminPasswordSetSchema.safeParse({ newPassword });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Neplatné heslo" };
+  }
+  const [target] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.id, targetUserId));
+  if (!target) return { ok: false, error: "Uživatel nenalezen" };
+  try {
+    const newHash = await hashPassword(parsed.data.newPassword);
+    await db
+      .update(users)
+      .set({ passwordHash: newHash })
+      .where(eq(users.id, targetUserId));
+    revalidatePath("/admin/users");
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? `Změna hesla selhala: ${err.message}` : "Změna hesla selhala",
     };
   }
 }
