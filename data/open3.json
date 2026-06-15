@@ -1,7 +1,8 @@
 {
   "tournamentName": "Jabloňová Open #3",
   "legs": "2,3,3,5",
+  "_note": "Groups verified against betting sheet (Jablonova3Sazky.xlsx) — all 11 bet group matches consistent. Playoff reconstructed from betting 'Výsledek' column (6 players, group winners Dan & David seeded with byes). ČF: Bohy>Singl, Anežka>Radim. SF: David>Bohy, Dan>Anežka. o3: Bohy>Anežka. Finále: David>Dan 5:3. Loser legs in ČF/SF/o3 are placeholders (Elo uses winner only). Final order: 1.David 2.Dan 3.Bohy 4.Anežka.",
   "groups": "Anežka,Matyáš,Dan,Bohy|Radim,Singl,Kovy,David",
   "odds": "Anežka:30.0|Dan:5.0|Singl:7.0|Bohy:1.3|Kovy:15.0|Radim:4.0|David:40.0|Matyáš:20.0",
-  "scores": "Anežka-Matyáš=2:0|Anežka-Dan=0:2|Anežka-Bohy=0:2|Matyáš-Anežka=0:2|Matyáš-Dan=2:1|Matyáš-Bohy=1:2|Dan-Anežka=2:0|Dan-Matyáš=1:2|Dan-Bohy=2:0|Bohy-Anežka=2:0|Bohy-Matyáš=2:1|Bohy-Dan=0:2|Radim-Singl=2:1|Radim-Kovy=2:0|Radim-David=0:2|Singl-Radim=1:2|Singl-Kovy=2:0|Singl-David=1:2|Kovy-Radim=0:2|Kovy-Singl=0:2|Kovy-David=0:2|David-Radim=2:0|David-Singl=2:1|David-Kovy=2:0|David-Dan=5:3"
+  "scores": "Anežka-Matyáš=2:0|Anežka-Dan=0:2|Anežka-Bohy=0:2|Matyáš-Anežka=0:2|Matyáš-Dan=2:1|Matyáš-Bohy=1:2|Dan-Anežka=2:0|Dan-Matyáš=1:2|Dan-Bohy=2:0|Bohy-Anežka=2:0|Bohy-Matyáš=2:1|Bohy-Dan=0:2|Radim-Singl=2:1|Radim-Kovy=2:0|Radim-David=0:2|Singl-Radim=1:2|Singl-Kovy=2:0|Singl-David=1:2|Kovy-Radim=0:2|Kovy-Singl=0:2|Kovy-David=0:2|David-Radim=2:0|David-Singl=2:1|David-Kovy=2:0|Bohy-Singl=3:1|Anežka-Radim=3:2|David-Bohy=3:2|Dan-Anežka=3:1|Bohy-Anežka=3:1|David-Dan=5:3"
 }
