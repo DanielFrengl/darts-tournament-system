@@ -47,6 +47,20 @@ export const AdminPasswordSetSchema = z.object({
 });
 export type AdminPasswordSetInput = z.infer<typeof AdminPasswordSetSchema>;
 
+/**
+ * Stakes are whole jablka only. Decimal vklady made payouts and capital
+ * awkward to read and served no purpose in a friends' tournament.
+ */
+export const StakeSchema = z
+  .number()
+  .int("Vklad musí být celé číslo")
+  .positive("Vklad musí být kladný");
+
+/** True when `n` is a usable whole-number stake. Shared by UI and server. */
+export function isWholeStake(n: number): boolean {
+  return Number.isInteger(n) && n > 0;
+}
+
 export const CapitalAdjustSchema = z.object({
   amount: z.number().refine((n) => n !== 0, { message: "amount must not be zero" }),
   note: z.string().min(1).max(500),

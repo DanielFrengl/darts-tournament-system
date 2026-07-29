@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { placeBetAction } from "@/app/(app)/match/[id]/actions";
 import { formatJablka } from "@/lib/jablka";
+import { isWholeStake } from "@/lib/validation";
 
 export type BetTarget = {
   selectionId: string;
@@ -44,7 +45,14 @@ export function BetDialog({
   if (!target) return null;
 
   const numericStake = Number(stake);
-  const validStake = Number.isFinite(numericStake) && numericStake > 0;
+  // Whole jablka only. `notWhole` is tracked separately so a typed decimal
+  // gets its own message instead of silently disabling the button.
+  const validStake = isWholeStake(numericStake);
+  const notWhole =
+    stake.trim() !== "" &&
+    Number.isFinite(numericStake) &&
+    numericStake > 0 &&
+    !Number.isInteger(numericStake);
   const maxStake = maxBet != null ? Math.min(capital, maxBet) : capital;
   const potentialPayout = validStake ? numericStake * target.finalOdds : 0;
   // overMax = over the absolute max-bet limit; overBalance = over capital.
@@ -88,10 +96,13 @@ export function BetDialog({
             <Input
               id="stake"
               type="number"
-              step="0.01"
+              inputMode="numeric"
+              step="1"
               min="1"
               max={maxStake}
               value={stake}
+              // Keep what was typed rather than stripping the separator:
+              // rewriting "1.5" to "15" would silently stake 10x more.
               onChange={(e) => setStake(e.target.value)}
               required
             />
@@ -110,6 +121,10 @@ export function BetDialog({
             <p className="text-sm text-destructive">Nedostatek kapitálu.</p>
           ) : overMax ? (
             <p className="text-sm text-destructive">Překračuje max sázku.</p>
+          ) : notWhole ? (
+            <p className="text-sm text-destructive">
+              Vklad musí být celé číslo.
+            </p>
           ) : null}
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={onClose}>
