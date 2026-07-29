@@ -15,10 +15,16 @@ import { winProbability } from "@/lib/elo";
 import {
   correctScoreDistribution,
   parimutuelOdds,
+  seededParimutuelOdds,
   blendOdds,
+  clampOdds,
   probabilityToOdds,
+  probabilityFromOdds,
 } from "@/lib/odds";
-import type { TournamentConfig } from "@/lib/tournament-config";
+import {
+  resolveOddsConfig,
+  type TournamentConfig,
+} from "@/lib/tournament-config";
 import { simulateTournament, type SimConfig } from "@/lib/tournament-sim";
 import { publish } from "@/lib/event-bus";
 
@@ -414,6 +420,7 @@ export class MarketService {
       .where(eq(tournaments.id, m.tournamentId));
     if (!t) return;
     const cfg = t.configJson as TournamentConfig;
+    const odds = resolveOddsConfig(cfg);
     const sels = await this.getSelections(marketId);
 
     const [totalRow] = await this.db
@@ -429,9 +436,27 @@ export class MarketService {
         .from(bets)
         .where(and(eq(bets.selectionId, sel.id), eq(bets.status, "open")));
       const poolOnSelection = Number(selRow?.pool ?? 0);
-      const pari = parimutuelOdds(totalPool, poolOnSelection, cfg.houseEdge);
       const stat = Number(sel.statOdds);
-      const final = blendOdds(stat, pari, totalPool, cfg.parimutuelThreshold);
+      // Seed the parimutuel with the selection's modelled probability so a
+      // one-sided book drifts instead of collapsing to ~1.00 / exploding.
+      const prob = probabilityFromOdds(stat, odds.houseEdge);
+      const pari =
+        prob === null
+          ? parimutuelOdds(totalPool, poolOnSelection, odds.houseEdge)
+          : seededParimutuelOdds(
+              totalPool,
+              poolOnSelection,
+              prob,
+              odds.seedPool,
+              odds.houseEdge
+            );
+      const blended = blendOdds(
+        stat,
+        pari,
+        totalPool,
+        odds.parimutuelThreshold
+      );
+      const final = clampOdds(blended, odds.minOdds, odds.maxOdds);
       await this.db
         .update(marketSelections)
         .set({
@@ -583,12 +608,16 @@ export class MarketService {
   ): Promise<void> {
     const [m] = await this.db.insert(markets).values(market).returning();
     if (!m) throw new Error("failed to insert market");
+    const odds = resolveOddsConfig(cfg);
     const rows = selections.map((s) => {
-      const stat = s.probability > 0 && s.probability < 1
-        ? probabilityToOdds(s.probability, cfg.houseEdge)
+      const raw = s.probability > 0 && s.probability < 1
+        ? probabilityToOdds(s.probability, odds.houseEdge)
         : s.probability >= 1
-          ? 1.01
-          : 999;
+          ? odds.minOdds
+          : odds.maxOdds;
+      // Long-shot correct-score legs used to seed at 999.0; hold every
+      // opening price inside the same band the live kurz uses.
+      const stat = clampOdds(raw, odds.minOdds, odds.maxOdds);
       return {
         marketId: m.id,
         label: s.label,

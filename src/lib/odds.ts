@@ -63,6 +63,78 @@ export function parimutuelOdds(
   return (totalPool * (1 - rake)) / poolOnSelection;
 }
 
+/** Fallbacks used when a tournament config predates the balancing knobs. */
+export const DEFAULT_ODDS_SEED_POOL = 500;
+export const DEFAULT_MIN_ODDS = 1.1;
+export const DEFAULT_MAX_ODDS = 25;
+
+/**
+ * Parimutuel odds with a virtual seed pool, so a lopsided book can't push
+ * one side to ~1.00 while the other explodes.
+ *
+ * Each selection is treated as if the house already staked
+ * `seedPool * probability` on it. That has two useful properties:
+ *
+ *   - with no real money, poolOnSelection = 0 and the formula collapses to
+ *     seedPool / (seedPool * p) = 1/p, i.e. exactly the statistical odds
+ *   - as the real pool grows past seedPool, the seed washes out and it
+ *     converges on the plain parimutuel result
+ *
+ * So odds now drift from ELO-implied toward money-implied instead of
+ * jumping the moment the first big bet lands. `probability` is the
+ * selection's modelled win chance in (0,1].
+ *
+ * Falls back to plain parimutuel when seedPool <= 0.
+ */
+export function seededParimutuelOdds(
+  totalPool: number,
+  poolOnSelection: number,
+  probability: number,
+  seedPool: number,
+  rake: number
+): number | null {
+  if (seedPool <= 0) return parimutuelOdds(totalPool, poolOnSelection, rake);
+  if (probability <= 0 || probability > 1) {
+    throw new Error("probability must be in (0,1]");
+  }
+  const effectiveTotal = totalPool + seedPool;
+  const effectiveSelection = poolOnSelection + seedPool * probability;
+  if (effectiveSelection <= 0) return null;
+  return (effectiveTotal * (1 - rake)) / effectiveSelection;
+}
+
+/**
+ * Hold odds inside a sane band. The floor matters most: raw parimutuel
+ * can return < 1.0, which would mean a winning bet pays back less than it
+ * cost. The ceiling stops a near-empty side showing a fantasy payout.
+ */
+export function clampOdds(
+  odds: number,
+  minOdds: number,
+  maxOdds: number
+): number {
+  if (maxOdds < minOdds) throw new Error("maxOdds must be >= minOdds");
+  // NaN has no position on the band, so fail safe to the floor. Infinity
+  // does have one, and clamps to the ceiling like any other huge number.
+  if (Number.isNaN(odds)) return minOdds;
+  return Math.min(maxOdds, Math.max(minOdds, odds));
+}
+
+/**
+ * Recover a selection's modelled probability from its stored stat odds.
+ * Inverse of probabilityToOdds. Returns null when the stored value is
+ * unusable, so callers can skip seeding rather than crash.
+ */
+export function probabilityFromOdds(
+  statOdds: number,
+  houseEdge: number
+): number | null {
+  if (!Number.isFinite(statOdds) || statOdds <= 0) return null;
+  const p = (1 - houseEdge) / statOdds;
+  if (!Number.isFinite(p) || p <= 0 || p > 1) return null;
+  return p;
+}
+
 /**
  * Blend statistical odds with parimutuel odds using a linear weight
  * that scales from 0 (no money in pool) to 1 (pool >= threshold).
