@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Trash2, X } from "lucide-react";
 import { placeParlayAction } from "@/app/(app)/bet-builder/actions";
 import { formatJablka } from "@/lib/jablka";
+import { isWholeStake } from "@/lib/validation";
 
 export type BuilderSelectionVM = {
   id: string;
@@ -92,12 +93,14 @@ export function BetBuilder({
 
   const combinedOdds = slip.reduce((acc, s) => acc * s.odds, 1);
   const stakeNum = Number(stake) || 0;
+  // Whole jablka only; flagged separately so a typed decimal explains itself.
+  const notWholeStake = stakeNum > 0 && !Number.isInteger(stakeNum);
   const maxStake = maxBet != null ? Math.min(capital, maxBet) : capital;
   const potential = stakeNum > 0 ? stakeNum * combinedOdds : 0;
 
   const canSubmit =
     slip.length >= 2 &&
-    stakeNum > 0 &&
+    isWholeStake(stakeNum) &&
     stakeNum <= maxStake &&
     !pending;
 
@@ -250,11 +253,13 @@ export function BetBuilder({
               <Input
                 id="stake"
                 type="number"
-                inputMode="decimal"
+                inputMode="numeric"
                 min={1}
                 max={maxStake}
                 step="1"
                 value={stake}
+                // Keep what was typed rather than stripping the separator:
+                // rewriting "1.5" to "15" would silently stake 10x more.
                 onChange={(e) => setStake(e.target.value)}
                 placeholder={`max ${fmt.format(maxStake)}`}
               />
@@ -298,6 +303,10 @@ export function BetBuilder({
             ) : maxBet != null && stakeNum > maxBet ? (
               <p className="text-xs text-destructive">
                 Vklad přesahuje max sázku {fmt.format(maxBet)}
+              </p>
+            ) : notWholeStake ? (
+              <p className="text-xs text-destructive">
+                Vklad musí být celé číslo.
               </p>
             ) : null}
           </CardContent>

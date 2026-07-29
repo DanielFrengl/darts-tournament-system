@@ -3,6 +3,7 @@ import {
   TournamentConfigSchema,
   defaultTournamentConfig,
   TournamentCreateSchema,
+  resolveOddsConfig,
 } from "@/lib/tournament-config";
 import { seedBracket, type GroupAdvancers } from "@/lib/bracket";
 
@@ -122,5 +123,54 @@ describe("TournamentCreateSchema", () => {
         config: defaultTournamentConfig(),
       }).success
     ).toBe(true);
+  });
+});
+
+describe("resolveOddsConfig", () => {
+  it("reads the knobs off a full config", () => {
+    const cfg = defaultTournamentConfig();
+    const odds = resolveOddsConfig(cfg);
+    expect(odds.seedPool).toBe(500);
+    expect(odds.minOdds).toBeCloseTo(1.1, 6);
+    expect(odds.maxOdds).toBe(25);
+  });
+
+  it("fills in defaults for a config written before the knobs existed", () => {
+    const legacy = { ...defaultTournamentConfig() } as Record<string, unknown>;
+    delete legacy.oddsSeedPool;
+    delete legacy.minOdds;
+    delete legacy.maxOdds;
+    const odds = resolveOddsConfig(legacy as never);
+    expect(odds.seedPool).toBe(500);
+    expect(odds.minOdds).toBeCloseTo(1.1, 6);
+    expect(odds.maxOdds).toBe(25);
+  });
+
+  it("survives null and undefined config", () => {
+    expect(resolveOddsConfig(null).seedPool).toBe(500);
+    expect(resolveOddsConfig(undefined).maxOdds).toBe(25);
+  });
+
+  it("never returns an inverted band", () => {
+    const odds = resolveOddsConfig({ minOdds: 5, maxOdds: 2 } as never);
+    expect(odds.maxOdds).toBeGreaterThanOrEqual(odds.minOdds);
+  });
+
+  it("schema rejects maxOdds below minOdds", () => {
+    const cfg = { ...defaultTournamentConfig(), minOdds: 1.5, maxOdds: 1.2 };
+    expect(TournamentConfigSchema.safeParse(cfg).success).toBe(false);
+  });
+
+  it("schema defaults the knobs when they are absent", () => {
+    const cfg = { ...defaultTournamentConfig() } as Record<string, unknown>;
+    delete cfg.oddsSeedPool;
+    delete cfg.minOdds;
+    delete cfg.maxOdds;
+    const parsed = TournamentConfigSchema.safeParse(cfg);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.oddsSeedPool).toBe(500);
+      expect(parsed.data.maxOdds).toBe(25);
+    }
   });
 });

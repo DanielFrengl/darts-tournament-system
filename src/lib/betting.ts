@@ -16,6 +16,7 @@ import type { DB } from "@/db/client";
 import { CapitalService } from "@/lib/capital";
 import { MarketService } from "@/lib/market";
 import { publish } from "@/lib/event-bus";
+import { isWholeStake } from "@/lib/validation";
 
 export type PlaceBetResult =
   | { ok: true; bet: Bet }
@@ -43,6 +44,9 @@ export class BettingService {
   ): Promise<PlaceBetResult> {
     if (!Number.isFinite(stake) || stake <= 0) {
       return { ok: false, error: "Stake must be positive" };
+    }
+    if (!isWholeStake(stake)) {
+      return { ok: false, error: "Vklad musí být celé číslo" };
     }
     let createdBet: Bet | null = null;
     try {
@@ -224,6 +228,9 @@ export class BettingService {
   ): Promise<PlaceParlayResult> {
     if (!Number.isFinite(stake) || stake <= 0) {
       return { ok: false, error: "Vklad musí být kladný" };
+    }
+    if (!isWholeStake(stake)) {
+      return { ok: false, error: "Vklad musí být celé číslo" };
     }
     if (selectionIds.length < 2) {
       return { ok: false, error: "Akumulátor potřebuje aspoň 2 výběry" };

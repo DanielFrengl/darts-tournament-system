@@ -4,6 +4,8 @@ import {
   LoginSchema,
   ProfileUpdateSchema,
   CapitalAdjustSchema,
+  StakeSchema,
+  isWholeStake,
 } from "@/lib/validation";
 
 describe("RegisterSchema", () => {
@@ -99,5 +101,28 @@ describe("CapitalAdjustSchema", () => {
   });
   it("rejects missing note", () => {
     expect(CapitalAdjustSchema.safeParse({ amount: 100 }).success).toBe(false);
+  });
+});
+
+describe("StakeSchema / isWholeStake", () => {
+  it("accepts whole positive stakes", () => {
+    expect(StakeSchema.safeParse(1).success).toBe(true);
+    expect(StakeSchema.safeParse(250).success).toBe(true);
+    expect(isWholeStake(1)).toBe(true);
+    expect(isWholeStake(250)).toBe(true);
+  });
+
+  it("rejects decimals", () => {
+    expect(StakeSchema.safeParse(1.5).success).toBe(false);
+    expect(StakeSchema.safeParse(0.01).success).toBe(false);
+    expect(isWholeStake(1.5)).toBe(false);
+    expect(isWholeStake(99.99)).toBe(false);
+  });
+
+  it("rejects zero, negatives and non-finite values", () => {
+    expect(isWholeStake(0)).toBe(false);
+    expect(isWholeStake(-5)).toBe(false);
+    expect(isWholeStake(Number.NaN)).toBe(false);
+    expect(isWholeStake(Number.POSITIVE_INFINITY)).toBe(false);
   });
 });
