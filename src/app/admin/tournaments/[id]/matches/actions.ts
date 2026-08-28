@@ -11,7 +11,11 @@ import {
   startLegWithMarkets,
   undoLastLegWithMarkets,
 } from "@/lib/leg";
-import { restoreMatch, closeLegBetting } from "@/lib/match-lifecycle";
+import {
+  restoreMatch,
+  closeLegBetting,
+  setMatchBestOf,
+} from "@/lib/match-lifecycle";
 import { publish } from "@/lib/event-bus";
 import { isAdmin } from "@/lib/roles";
 
@@ -56,6 +60,33 @@ export async function markUpcomingAction(
     revalidatePath("/display");
     publish(`tournament:${m.tournamentId}`, "upcoming_changed", { matchId });
     return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
+/**
+ * Change how many legs a single not-yet-started match is played to, without
+ * touching the rest of its round. Voids and reseeds the match's pre-match
+ * books, refunding anything already staked on them — the scorelines those
+ * bets were placed on don't exist at the new length.
+ */
+export async function setMatchBestOfAction(
+  tournamentId: string,
+  matchId: string,
+  bestOf: number
+): Promise<
+  { ok: true; changed: boolean; refunded: number } | { ok: false; error: string }
+> {
+  if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
+  try {
+    const r = await setMatchBestOf(matchId, bestOf);
+    revalidatePath(`/admin/tournaments/${tournamentId}/matches`);
+    revalidatePath(`/admin/tournaments/${tournamentId}/play`);
+    revalidatePath("/tournament");
+    revalidatePath("/sazeni");
+    revalidatePath("/display");
+    return { ok: true, ...r };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Failed" };
   }

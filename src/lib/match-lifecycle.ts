@@ -19,6 +19,8 @@ import { matchService } from "@/lib/match";
 import { tournamentService } from "@/lib/tournament";
 import { publish } from "@/lib/event-bus";
 import { updateRatings } from "@/lib/elo";
+import type { TournamentConfig } from "@/lib/tournament-config";
+import type { Match } from "@/db/schema";
 
 /**
  * Match/leg → market orchestration. Pure side-effect choreography:
@@ -335,6 +337,135 @@ export async function restoreMatch(matchId: string): Promise<void> {
   publish(`match:${matchId}`, "restored");
   const summary = await buildMatchSummary(matchId);
   publish(`tournament:${m.tournamentId}`, "match_restored", { matchId, summary });
+}
+
+/** Longest match the config schema allows; keep the two in step. */
+const MAX_BEST_OF = 15;
+
+/**
+ * Change how many legs a not-yet-started match is played to.
+ *
+ * Both pre-match books are derived from bestOf — match_winner through the
+ * best-of-N path sum, correct_score through the whole set of reachable
+ * scorelines — so they can't just be re-priced: a best-of-5 book offers 3:2
+ * and a best-of-7 book offers 4:3. The old ones are voided and rebuilt, and
+ * any bet standing on them is refunded first, because the outcomes those
+ * bets were placed on no longer exist.
+ *
+ * Returns how many bets were handed back, so the caller can say so.
+ */
+export async function setMatchBestOf(
+  matchId: string,
+  bestOf: number
+): Promise<{ changed: boolean; refunded: number }> {
+  if (!Number.isInteger(bestOf) || bestOf < 1 || bestOf > MAX_BEST_OF) {
+    throw new Error(`Počet legů musí být 1–${MAX_BEST_OF}`);
+  }
+  if (bestOf % 2 === 0) throw new Error("Počet legů musí být lichý");
+
+  const [m] = await db.select().from(matches).where(eq(matches.id, matchId));
+  if (!m) throw new Error("Zápas nenalezen");
+  if (m.status !== "scheduled") {
+    throw new Error("Počet legů lze změnit jen u nezahájeného zápasu");
+  }
+  const legRows = await db.select().from(legs).where(eq(legs.matchId, matchId));
+  if (legRows.length > 0) {
+    throw new Error("Zápas už má rozehrané legy");
+  }
+  if (m.bestOf === bestOf) return { changed: false, refunded: 0 };
+
+  await db.update(matches).set({ bestOf }).where(eq(matches.id, matchId));
+
+  // Void the stale book: refund what's on it, mark it cancelled, reseed.
+  const stale = await marketService.cancelMatchMarkets(matchId);
+  let refunded = 0;
+  if (stale.length > 0) {
+    const open = await db
+      .select({ id: bets.id })
+      .from(bets)
+      .where(and(inArray(bets.selectionId, stale), eq(bets.status, "open")));
+    refunded = open.length;
+    await bettingService.refundSelections(stale);
+  }
+  await marketService.createForMatch(matchId);
+
+  publish(`match:${matchId}`, "best_of_changed", { bestOf });
+  publish(`tournament:${m.tournamentId}`, "match_updated", { matchId, bestOf });
+  return { changed: true, refunded };
+}
+
+/** Config key holding each phase's match length, and the phases it governs. */
+const PHASE_BEST_OF = {
+  group: { key: "bestOfGroup", phases: ["group"] },
+  quarter: { key: "bestOfQuarter", phases: ["quarter"] },
+  // The bracket seeds the third-place play-off at semi length too.
+  semi: { key: "bestOfSemi", phases: ["semi", "third_place"] },
+  final: { key: "bestOfFinal", phases: ["final"] },
+} as const satisfies Record<
+  string,
+  { key: keyof TournamentConfig; phases: readonly Match["phase"][] }
+>;
+
+export type BestOfPhase = keyof typeof PHASE_BEST_OF;
+
+/**
+ * Set how many legs a whole round is played to, mid-tournament.
+ *
+ * Two things have to move together. The config value is what later rounds
+ * are built from — semifinals don't exist as rows until the quarters finish,
+ * so changing bestOfSemi before then is the only way to reach them. Rounds
+ * already drawn are matches with their own bestOf, so the ones that haven't
+ * started are updated in place as well.
+ *
+ * Matches already under way keep the length they started at.
+ */
+export async function setPhaseBestOf(
+  tournamentId: string,
+  phase: BestOfPhase,
+  bestOf: number
+): Promise<{ updated: number; refunded: number; skipped: number }> {
+  if (!Number.isInteger(bestOf) || bestOf < 1 || bestOf > MAX_BEST_OF) {
+    throw new Error(`Počet legů musí být 1–${MAX_BEST_OF}`);
+  }
+  if (bestOf % 2 === 0) throw new Error("Počet legů musí být lichý");
+
+  const t = await tournamentService.get(tournamentId);
+  if (!t) throw new Error("Turnaj nenalezen");
+  if (t.status === "finished") throw new Error("Turnaj je už dohraný");
+
+  const { key, phases } = PHASE_BEST_OF[phase];
+  await tournamentService.updateLiveConfig(tournamentId, {
+    ...t.configJson,
+    [key]: bestOf,
+  });
+
+  const affected = await db
+    .select()
+    .from(matches)
+    .where(
+      and(
+        eq(matches.tournamentId, tournamentId),
+        inArray(matches.phase, [...phases])
+      )
+    );
+
+  let updated = 0;
+  let refunded = 0;
+  let skipped = 0;
+  for (const m of affected) {
+    if (m.bestOf === bestOf) continue;
+    if (m.status !== "scheduled") {
+      // Live or already played — its length is settled.
+      skipped++;
+      continue;
+    }
+    const r = await setMatchBestOf(m.id, bestOf);
+    if (r.changed) updated++;
+    refunded += r.refunded;
+  }
+
+  publish(`tournament:${tournamentId}`, "config_changed", { phase, bestOf });
+  return { updated, refunded, skipped };
 }
 
 /**

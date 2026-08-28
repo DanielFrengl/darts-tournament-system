@@ -11,10 +11,18 @@ import { bracketService } from "@/lib/bracket";
 import { marketService } from "@/lib/market";
 import { bettingService } from "@/lib/betting";
 import { capitalService } from "@/lib/capital";
-import { onMatchesCreated } from "@/lib/match-lifecycle";
+import {
+  onMatchesCreated,
+  setPhaseBestOf,
+  type BestOfPhase,
+} from "@/lib/match-lifecycle";
+import { resyncPlayerRatings } from "@/lib/competitor";
 import { isAdmin, isDebug } from "@/lib/roles";
 
 type Result = { ok: true } | { ok: false; error: string };
+type BestOfResult =
+  | { ok: true; updated: number; refunded: number; skipped: number }
+  | { ok: false; error: string };
 type StartResult =
   | { ok: true; firstMatchId: string | null }
   | { ok: false; error: string };
@@ -67,7 +75,9 @@ export async function updateAdvancePerGroup(
     };
   }
   try {
-    await tournamentService.updateConfig(tournamentId, {
+    // updateLiveConfig, not updateConfig: this control is offered during the
+    // group phase too, and updateConfig is draft-only.
+    await tournamentService.updateLiveConfig(tournamentId, {
       ...t.configJson,
       advancePerGroup,
     });
@@ -76,6 +86,59 @@ export async function updateAdvancePerGroup(
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Failed" };
   }
+}
+
+/**
+ * Change how many legs a whole round is played to while the tournament runs
+ * — typically bumping the semifinal or final before that round is drawn.
+ */
+export async function updatePhaseBestOf(
+  tournamentId: string,
+  phase: BestOfPhase,
+  bestOf: number
+): Promise<BestOfResult> {
+  if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
+  try {
+    const r = await setPhaseBestOf(tournamentId, phase, bestOf);
+    revalidateMatchSurfaces(tournamentId);
+    return { ok: true, ...r };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
+/**
+ * Reseed the roster's ratings from the carried competitor records and
+ * re-price the open books off them. The repair for a tournament whose
+ * players were added before they were seeded from a competitor — every one
+ * of them stuck at the 1500 default, so every market opened at an even 2.00.
+ */
+export async function resyncRatings(
+  tournamentId: string
+): Promise<
+  | { ok: true; players: number; linked: number; replayed: number; repriced: number }
+  | { ok: false; error: string }
+> {
+  if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
+  try {
+    const r = await resyncPlayerRatings(db, tournamentId);
+    const repriced = await marketService.repriceOpenMarkets(tournamentId);
+    revalidateMatchSurfaces(tournamentId);
+    revalidatePath("/sance");
+    return { ok: true, ...r, repriced };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Failed" };
+  }
+}
+
+/** Every surface that renders match length or odds. */
+function revalidateMatchSurfaces(tournamentId: string): void {
+  revalidatePath(`/admin/tournaments/${tournamentId}`);
+  revalidatePath(`/admin/tournaments/${tournamentId}/matches`);
+  revalidatePath(`/admin/tournaments/${tournamentId}/play`);
+  revalidatePath("/tournament");
+  revalidatePath("/sazeni");
+  revalidatePath("/display");
 }
 
 export async function deleteTournament(tournamentId: string): Promise<Result> {

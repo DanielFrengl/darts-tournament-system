@@ -76,6 +76,30 @@ export class TournamentService {
       .where(eq(tournaments.id, id));
   }
 
+  /**
+   * Update the config of a tournament that is already under way.
+   *
+   * `updateConfig` stays draft-only on purpose: most of the config (group
+   * count, group size, starting capital) is baked into rows the moment the
+   * tournament starts, so changing it later would only desync the two. This
+   * is the narrow door for the knobs that stay meaningful mid-tournament —
+   * how many legs a round is played to, how many advance from a group — and
+   * the caller owns checking that its particular change is one of them.
+   */
+  async updateLiveConfig(id: string, config: TournamentConfig): Promise<void> {
+    const validated = TournamentConfigSchema.parse(config);
+    const current = await this.get(id);
+    if (!current) throw new Error("tournament not found");
+    if (current.status === "finished") {
+      throw new Error("config cannot be updated on a finished tournament");
+    }
+    await this.db
+      .update(tournaments)
+      .set({ configJson: validated })
+      .where(eq(tournaments.id, id));
+    publish(`tournament:${id}`, "config_changed");
+  }
+
   async transition(id: string, to: Status): Promise<void> {
     const current = await this.get(id);
     if (!current) throw new Error("tournament not found");

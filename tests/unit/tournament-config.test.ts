@@ -130,30 +130,35 @@ describe("resolveOddsConfig", () => {
   it("reads the knobs off a full config", () => {
     const cfg = defaultTournamentConfig();
     const odds = resolveOddsConfig(cfg);
-    expect(odds.seedPool).toBe(500);
+    expect(odds.moneyWeight).toBeCloseTo(0.5, 6);
     expect(odds.minOdds).toBeCloseTo(1.1, 6);
     expect(odds.maxOdds).toBe(25);
   });
 
   it("fills in defaults for a config written before the knobs existed", () => {
     const legacy = { ...defaultTournamentConfig() } as Record<string, unknown>;
-    delete legacy.oddsSeedPool;
+    delete legacy.oddsMoneyWeight;
     delete legacy.minOdds;
     delete legacy.maxOdds;
     const odds = resolveOddsConfig(legacy as never);
-    expect(odds.seedPool).toBe(500);
+    expect(odds.moneyWeight).toBeCloseTo(0.5, 6);
     expect(odds.minOdds).toBeCloseTo(1.1, 6);
     expect(odds.maxOdds).toBe(25);
   });
 
   it("survives null and undefined config", () => {
-    expect(resolveOddsConfig(null).seedPool).toBe(500);
+    expect(resolveOddsConfig(null).moneyWeight).toBeCloseTo(0.5, 6);
     expect(resolveOddsConfig(undefined).maxOdds).toBe(25);
   });
 
   it("never returns an inverted band", () => {
     const odds = resolveOddsConfig({ minOdds: 5, maxOdds: 2 } as never);
     expect(odds.maxOdds).toBeGreaterThanOrEqual(odds.minOdds);
+  });
+
+  it("caps the money weight below 1 so the ratings always keep a share", () => {
+    expect(resolveOddsConfig({ oddsMoneyWeight: 5 } as never).moneyWeight).toBe(0.9);
+    expect(resolveOddsConfig({ oddsMoneyWeight: -1 } as never).moneyWeight).toBe(0);
   });
 
   it("schema rejects maxOdds below minOdds", () => {
@@ -163,13 +168,13 @@ describe("resolveOddsConfig", () => {
 
   it("schema defaults the knobs when they are absent", () => {
     const cfg = { ...defaultTournamentConfig() } as Record<string, unknown>;
-    delete cfg.oddsSeedPool;
+    delete cfg.oddsMoneyWeight;
     delete cfg.minOdds;
     delete cfg.maxOdds;
     const parsed = TournamentConfigSchema.safeParse(cfg);
     expect(parsed.success).toBe(true);
     if (parsed.success) {
-      expect(parsed.data.oddsSeedPool).toBe(500);
+      expect(parsed.data.oddsMoneyWeight).toBeCloseTo(0.5, 6);
       expect(parsed.data.maxOdds).toBe(25);
     }
   });

@@ -13,7 +13,11 @@ import {
   undoLastLegAction,
   markUpcomingAction,
   closeLegBettingAction,
+  setMatchBestOfAction,
 } from "@/app/admin/tournaments/[id]/matches/actions";
+
+/** Odd lengths only — a match is first to ceil(bestOf/2). */
+const BEST_OF_OPTIONS = [1, 3, 5, 7, 9, 11, 13, 15];
 
 // Localized labels so the admin runner matches the Czech UI used everywhere
 // else instead of leaking raw English enum values (group/scheduled/pending).
@@ -75,6 +79,30 @@ export function MatchRow({
     isLive &&
     !liveLeg &&
     match.legs.some((l) => l.status === "finished" && l.winnerId);
+
+  function changeBestOf(value: number) {
+    if (value === match.bestOf) return;
+    if (
+      !confirm(
+        `Hrát tento zápas na best of ${value}?\nOtevřené sázky na vítěze zápasu a přesné skóre budou vráceny — při jiném počtu legů platí jiná skóre.`
+      )
+    ) {
+      return;
+    }
+    start(async () => {
+      const r = await setMatchBestOfAction(tournamentId, match.id, value);
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      toast.success(
+        r.refunded > 0
+          ? `Best of ${value} — vráceno ${r.refunded} sázek`
+          : `Best of ${value}`
+      );
+      router.refresh();
+    });
+  }
 
   function startLegClick() {
     start(async () => {
@@ -212,7 +240,26 @@ export function MatchRow({
           <Badge variant="outline">{PHASE_LABEL[match.phase] ?? match.phase}</Badge>
           <StatusBadge kind="match" status={match.status} />
           {match.isUpcoming && <Badge>Nadcházející</Badge>}
-          <span className="text-muted-foreground">best of {match.bestOf}</span>
+          {match.status === "scheduled" ? (
+            <label className="flex items-center gap-1.5 text-muted-foreground">
+              best of
+              <select
+                value={match.bestOf}
+                disabled={pending}
+                onChange={(e) => changeBestOf(Number(e.target.value))}
+                className="rounded border bg-background px-1.5 py-0.5 text-sm"
+                aria-label="Počet legů"
+              >
+                {BEST_OF_OPTIONS.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <span className="text-muted-foreground">best of {match.bestOf}</span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {match.status === "scheduled" && (

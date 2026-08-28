@@ -1,7 +1,15 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import { eq } from "drizzle-orm";
 import { setupTestDb, truncateAll, teardownTestDb, testDb } from "../setup/db";
-import { matches, markets, marketSelections, bets, users, transactions } from "@/db/schema";
+import {
+  appSettings,
+  matches,
+  markets,
+  marketSelections,
+  bets,
+  users,
+  transactions,
+} from "@/db/schema";
 import { createUser } from "../setup/factories";
 import { TournamentService } from "@/lib/tournament";
 import { PlayerService } from "@/lib/player";
@@ -25,6 +33,17 @@ beforeEach(async () => {
 afterAll(async () => {
   await teardownTestDb();
 });
+
+/** BettingService reads the ceiling straight off the settings singleton. */
+async function setMaxBet(amount: number) {
+  await testDb
+    .insert(appSettings)
+    .values({ id: 1, maxBet: amount.toFixed(2) })
+    .onConflictDoUpdate({
+      target: appSettings.id,
+      set: { maxBet: amount.toFixed(2) },
+    });
+}
 
 async function setupBettableMatch() {
   const t = await tournamentService.create({ name: "T", config: defaultTournamentConfig() });
@@ -82,12 +101,22 @@ describe("BettingService.placeBet", () => {
     expect(r.ok).toBe(false);
   });
 
-  it("rejects stake exceeding max_stake_pct of capital", async () => {
-    const u = await createUser({ capital: "100" });
+  // The old percentage-of-capital cap is gone; the settings max bet is the
+  // only ceiling left, and it is an absolute amount rather than a share.
+  it("rejects stake exceeding the configured absolute max bet", async () => {
+    const u = await createUser({ capital: "1000" });
+    await setMaxBet(50);
     const { matchWinnerSelections } = await setupBettableMatch();
     const r = await bettingService.placeBet(u.id, matchWinnerSelections[0]!.id, 80);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toMatch(/max/i);
+  });
+
+  it("allows a large stake when no max bet is configured", async () => {
+    const u = await createUser({ capital: "1000" });
+    const { matchWinnerSelections } = await setupBettableMatch();
+    const r = await bettingService.placeBet(u.id, matchWinnerSelections[0]!.id, 800);
+    expect(r.ok).toBe(true);
   });
 
   it("rejects stake larger than balance", async () => {
@@ -108,9 +137,9 @@ describe("BettingService.placeBet", () => {
       .from(marketSelections)
       .where(eq(marketSelections.id, sel.id));
     expect(reloaded?.pariOdds).not.toBeNull();
-    // With 100% of pool on this selection, parimutuel odds → 1 (no money to win),
-    // so blended final_odds shifts downward.
-    expect(Number(reloaded?.finalOdds)).not.toBe(Number(before));
+    // All the money is on this selection, so the market probability rises
+    // above what the ratings alone said and the price comes down.
+    expect(Number(reloaded?.finalOdds)).toBeLessThan(Number(before));
   });
 });
 
@@ -167,12 +196,14 @@ describe("BettingService settlement", () => {
       true
     );
 
-    // Pool is empty again → parimutuel component cleared.
+    // Pool is empty again: the tote column goes undefined, and with no money
+    // left to speak the published kurz falls back to the ratings' price.
     const [reloadedSel] = await testDb
       .select()
       .from(marketSelections)
       .where(eq(marketSelections.id, sel.id));
     expect(reloadedSel?.pariOdds).toBeNull();
+    expect(Number(reloadedSel?.finalOdds)).toBeCloseTo(Number(sel.statOdds), 4);
     void matchWinnerMarket;
   });
 
@@ -209,5 +240,59 @@ describe("BettingService settlement", () => {
     expect(Number(reloaded?.capital)).toBe(1000);
     const [b] = await testDb.select().from(bets).where(eq(bets.userId, u.id));
     expect(b?.status).toBe("refunded");
+  });
+});
+
+describe("a lopsided book", () => {
+  /** Stake `a` on one side and `b` on the other, return published odds. */
+  async function book(a: number, b: number) {
+    const { matchWinnerSelections } = await setupBettableMatch();
+    const [selA, selB] = matchWinnerSelections as [
+      (typeof matchWinnerSelections)[0],
+      (typeof matchWinnerSelections)[0],
+    ];
+    const fair = Number(selA.statOdds);
+    const u1 = await createUser({ capital: "1000000", email: "w1@a.cz", username: "w1" });
+    const u2 = await createUser({ capital: "1000000", email: "w2@a.cz", username: "w2" });
+    if (a > 0) expect((await bettingService.placeBet(u1.id, selA.id, a)).ok).toBe(true);
+    if (b > 0) expect((await bettingService.placeBet(u2.id, selB.id, b)).ok).toBe(true);
+    const rows = await testDb
+      .select()
+      .from(marketSelections)
+      .where(eq(marketSelections.marketId, selA.marketId));
+    const light = rows.find((r) => r.id === selA.id)!;
+    const heavy = rows.find((r) => r.id === selB.id)!;
+    return { fair, light: Number(light.finalOdds), heavy: Number(heavy.finalOdds) };
+  }
+
+  // The reported bug: 100 against 100 000 sent the light side to the 25.00
+  // ceiling — 100 jablek paying 2500 on what the ratings call a coin flip.
+  it("never pays more than double the fair price, however big the whale", async () => {
+    const { fair, light, heavy } = await book(100, 100_000);
+    expect(light).toBeLessThanOrEqual(fair * 2 + 0.01);
+    expect(light).toBeGreaterThan(fair);
+    expect(heavy).toBeLessThan(fair);
+    expect(heavy).toBeGreaterThan(1);
+  });
+
+  // Scale-free only once the money weight has ramped to its cap; below the
+  // confidence threshold a thin pool deliberately still counts for less.
+  it("prices the same ratio the same way at any scale", async () => {
+    const small = await book(100, 100_000);
+    await truncateAll();
+    const large = await book(500, 500_000);
+    expect(large.light).toBeCloseTo(small.light, 2);
+  });
+
+  it("leaves an evenly backed book on its opening price", async () => {
+    const { fair, light, heavy } = await book(5_000, 5_000);
+    expect(light).toBeCloseTo(fair, 2);
+    expect(heavy).toBeCloseTo(fair, 2);
+  });
+
+  it("keeps the two sides' implied probabilities summing to 1", async () => {
+    const { light, heavy } = await book(100, 100_000);
+    // 4 dp: that is the precision finalOdds is stored at.
+    expect(1 / light + 1 / heavy).toBeCloseTo(1, 4);
   });
 });

@@ -15,14 +15,15 @@ import { winProbability } from "@/lib/elo";
 import {
   correctScoreDistribution,
   parimutuelOdds,
-  seededParimutuelOdds,
-  blendOdds,
+  marketProbabilities,
+  moneyWeight,
   clampOdds,
   probabilityToOdds,
   probabilityFromOdds,
 } from "@/lib/odds";
 import {
   resolveOddsConfig,
+  type OddsBalanceConfig,
   type TournamentConfig,
 } from "@/lib/tournament-config";
 import { simulateTournament, type SimConfig } from "@/lib/tournament-sim";
@@ -60,7 +61,15 @@ export class MarketService {
     if (!match) throw new Error("match not found");
     if (!match.playerAId || !match.playerBId) return;
     const existing = await this.listByMatch(matchId);
-    if (existing.some((m) => m.type === "match_winner")) return;
+    // Cancelled markets don't count as existing: a book voided because the
+    // match length changed has to be replaced, not treated as still there.
+    if (
+      existing.some(
+        (m) => m.type === "match_winner" && m.status !== "cancelled"
+      )
+    ) {
+      return;
+    }
 
     const [pA] = await this.db.select().from(players).where(eq(players.id, match.playerAId));
     const [pB] = await this.db.select().from(players).where(eq(players.id, match.playerBId));
@@ -423,40 +432,40 @@ export class MarketService {
     const odds = resolveOddsConfig(cfg);
     const sels = await this.getSelections(marketId);
 
-    const [totalRow] = await this.db
-      .select({ total: sum(bets.stake) })
-      .from(bets)
-      .innerJoin(marketSelections, eq(marketSelections.id, bets.selectionId))
-      .where(and(eq(marketSelections.marketId, marketId), eq(bets.status, "open")));
-    const totalPool = Number(totalRow?.total ?? 0);
-
+    // One pass over the whole market: prices have to be set together, since
+    // each selection's probability depends on the pool as a whole.
+    const pools: number[] = [];
     for (const sel of sels) {
       const [selRow] = await this.db
         .select({ pool: sum(bets.stake) })
         .from(bets)
         .where(and(eq(bets.selectionId, sel.id), eq(bets.status, "open")));
-      const poolOnSelection = Number(selRow?.pool ?? 0);
-      const stat = Number(sel.statOdds);
-      // Seed the parimutuel with the selection's modelled probability so a
-      // one-sided book drifts instead of collapsing to ~1.00 / exploding.
-      const prob = probabilityFromOdds(stat, odds.houseEdge);
-      const pari =
-        prob === null
-          ? parimutuelOdds(totalPool, poolOnSelection, odds.houseEdge)
-          : seededParimutuelOdds(
-              totalPool,
-              poolOnSelection,
-              prob,
-              odds.seedPool,
-              odds.houseEdge
-            );
-      const blended = blendOdds(
-        stat,
-        pari,
-        totalPool,
-        odds.parimutuelThreshold
+      pools.push(Number(selRow?.pool ?? 0));
+    }
+    const totalPool = pools.reduce((a, b) => a + b, 0);
+
+    // What the ratings think, recovered from the opening prices.
+    const model = sels.map(
+      (sel) =>
+        probabilityFromOdds(Number(sel.statOdds), odds.houseEdge) ??
+        1 / Math.max(sels.length, 1)
+    );
+    const probs = marketProbabilities(
+      model,
+      pools,
+      moneyWeight(totalPool, odds.parimutuelThreshold, odds.moneyWeight)
+    );
+
+    for (let i = 0; i < sels.length; i++) {
+      const sel = sels[i]!;
+      const p = probs[i]!;
+      const final = clampOdds(
+        p > 0 ? probabilityToOdds(Math.min(p, 0.999999), odds.houseEdge) : odds.maxOdds,
+        odds.minOdds,
+        odds.maxOdds
       );
-      const final = clampOdds(blended, odds.minOdds, odds.maxOdds);
+      // Informational only: what a straight tote payout would have been.
+      const pari = parimutuelOdds(totalPool, pools[i]!, odds.houseEdge);
       await this.db
         .update(marketSelections)
         .set({
@@ -585,20 +594,101 @@ export class MarketService {
     const ms = await this.db
       .select()
       .from(markets)
-      .where(
-        and(
-          eq(markets.matchId, matchId),
-          eq(markets.scope, "match"),
-          eq(markets.status, "cancelled")
-        )
+      .where(and(eq(markets.matchId, matchId), eq(markets.scope, "match")));
+
+    // A market cancelled because the match length changed has already been
+    // replaced, so reopening it would put a stale book (priced for the old
+    // best-of) back on the board next to the current one. Per type, reopen
+    // only the newest cancelled market, and only when nothing live replaced it.
+    const reopenable: typeof ms = [];
+    for (const type of new Set(ms.map((m) => m.type))) {
+      const ofType = ms.filter((m) => m.type === type);
+      if (ofType.some((m) => m.status !== "cancelled")) continue;
+      const newest = ofType.reduce((a, b) =>
+        a.opensAt >= b.opensAt ? a : b
       );
-    for (const m of ms) {
+      reopenable.push(newest);
+    }
+
+    for (const m of reopenable) {
       await this.db
         .update(markets)
         .set({ status: "open", closesAt: null, settledAt: null })
         .where(eq(markets.id, m.id));
     }
-    return ms.length;
+    return reopenable.length;
+  }
+
+  /**
+   * Re-price a tournament's open match- and leg-level markets from the
+   * players' current ELO ratings.
+   *
+   * Only `statOdds` is rewritten, and in place: selections keep their ids, so
+   * bets already placed against them are untouched and keep the odds they
+   * locked in. `recomputeOdds` then rebuilds the published kurz from the new
+   * baseline plus whatever money is already in the pool.
+   *
+   * Used after a rating repair, when every market was seeded off a roster
+   * that was uniformly sitting at the 1500 default.
+   */
+  async repriceOpenMarkets(tournamentId: string): Promise<number> {
+    const [t] = await this.db
+      .select()
+      .from(tournaments)
+      .where(eq(tournaments.id, tournamentId));
+    if (!t) return 0;
+    const odds = resolveOddsConfig(t.configJson as TournamentConfig);
+    const open = await this.db
+      .select()
+      .from(markets)
+      .where(
+        and(
+          eq(markets.tournamentId, tournamentId),
+          eq(markets.status, "open"),
+          inArray(markets.scope, ["match", "leg"])
+        )
+      );
+
+    let repriced = 0;
+    for (const m of open) {
+      if (!m.matchId) continue;
+      const [match] = await this.db
+        .select()
+        .from(matches)
+        .where(eq(matches.id, m.matchId));
+      if (!match?.playerAId || !match.playerBId) continue;
+      const [pA] = await this.db
+        .select()
+        .from(players)
+        .where(eq(players.id, match.playerAId));
+      const [pB] = await this.db
+        .select()
+        .from(players)
+        .where(eq(players.id, match.playerBId));
+      if (!pA || !pB) continue;
+
+      const probs = selectionProbabilities(
+        m.type,
+        winProbability(pA.eloRating, pB.eloRating),
+        match.bestOf,
+        pA.id,
+        pB.id
+      );
+      if (!probs) continue;
+
+      for (const sel of await this.getSelections(m.id)) {
+        const p = probs(sel);
+        if (p === null) continue;
+        await this.db
+          .update(marketSelections)
+          .set({ statOdds: openingOdds(p, odds).toFixed(4) })
+          .where(eq(marketSelections.id, sel.id));
+      }
+      // Rebuilds finalOdds (and pariOdds) off the statOdds just written.
+      await this.recomputeOdds(m.id);
+      repriced++;
+    }
+    return repriced;
   }
 
   private async insertMarket(
@@ -610,14 +700,7 @@ export class MarketService {
     if (!m) throw new Error("failed to insert market");
     const odds = resolveOddsConfig(cfg);
     const rows = selections.map((s) => {
-      const raw = s.probability > 0 && s.probability < 1
-        ? probabilityToOdds(s.probability, odds.houseEdge)
-        : s.probability >= 1
-          ? odds.minOdds
-          : odds.maxOdds;
-      // Long-shot correct-score legs used to seed at 999.0; hold every
-      // opening price inside the same band the live kurz uses.
-      const stat = clampOdds(raw, odds.minOdds, odds.maxOdds);
+      const stat = openingOdds(s.probability, odds);
       return {
         marketId: m.id,
         label: s.label,
@@ -632,6 +715,60 @@ export class MarketService {
     if (rows.length > 0) {
       await this.db.insert(marketSelections).values(rows);
     }
+  }
+}
+
+/**
+ * Opening price for a modelled probability, held inside the configured
+ * band. Long-shot correct-score legs used to seed at a literal 999.0; every
+ * opening price now lives in the same band the live kurz does.
+ */
+function openingOdds(probability: number, odds: OddsBalanceConfig): number {
+  const raw =
+    probability > 0 && probability < 1
+      ? probabilityToOdds(probability, odds.houseEdge)
+      : probability >= 1
+        ? odds.minOdds
+        : odds.maxOdds;
+  return clampOdds(raw, odds.minOdds, odds.maxOdds);
+}
+
+/**
+ * How to read a modelled probability off each selection of a market, given
+ * the pair's per-leg win probability. Returns null for market types that
+ * aren't derived from a head-to-head match (the tournament futures, which
+ * need a fresh Monte Carlo run rather than a re-price).
+ */
+function selectionProbabilities(
+  marketType: Market["type"],
+  pAWinsLeg: number,
+  bestOf: number,
+  playerAId: string,
+  playerBId: string
+): ((sel: MarketSelection) => number | null) | null {
+  switch (marketType) {
+    case "match_winner": {
+      const pA = matchWinProbabilityFromLegProb(pAWinsLeg, bestOf);
+      return (sel) =>
+        sel.playerId === playerAId
+          ? pA
+          : sel.playerId === playerBId
+            ? 1 - pA
+            : null;
+    }
+    case "leg_winner":
+      return (sel) =>
+        sel.playerId === playerAId
+          ? pAWinsLeg
+          : sel.playerId === playerBId
+            ? 1 - pAWinsLeg
+            : null;
+    case "correct_score": {
+      const dist = correctScoreDistribution(pAWinsLeg, bestOf);
+      return (sel) => dist.get(`${sel.scoreA}:${sel.scoreB}`) ?? null;
+    }
+    default:
+      return null;
   }
 }
 
