@@ -15,8 +15,8 @@ import { winProbability } from "@/lib/elo";
 import {
   correctScoreDistribution,
   parimutuelOdds,
-  seededParimutuelOdds,
-  blendOdds,
+  marketProbabilities,
+  moneyWeight,
   clampOdds,
   probabilityToOdds,
   probabilityFromOdds,
@@ -432,40 +432,40 @@ export class MarketService {
     const odds = resolveOddsConfig(cfg);
     const sels = await this.getSelections(marketId);
 
-    const [totalRow] = await this.db
-      .select({ total: sum(bets.stake) })
-      .from(bets)
-      .innerJoin(marketSelections, eq(marketSelections.id, bets.selectionId))
-      .where(and(eq(marketSelections.marketId, marketId), eq(bets.status, "open")));
-    const totalPool = Number(totalRow?.total ?? 0);
-
+    // One pass over the whole market: prices have to be set together, since
+    // each selection's probability depends on the pool as a whole.
+    const pools: number[] = [];
     for (const sel of sels) {
       const [selRow] = await this.db
         .select({ pool: sum(bets.stake) })
         .from(bets)
         .where(and(eq(bets.selectionId, sel.id), eq(bets.status, "open")));
-      const poolOnSelection = Number(selRow?.pool ?? 0);
-      const stat = Number(sel.statOdds);
-      // Seed the parimutuel with the selection's modelled probability so a
-      // one-sided book drifts instead of collapsing to ~1.00 / exploding.
-      const prob = probabilityFromOdds(stat, odds.houseEdge);
-      const pari =
-        prob === null
-          ? parimutuelOdds(totalPool, poolOnSelection, odds.houseEdge)
-          : seededParimutuelOdds(
-              totalPool,
-              poolOnSelection,
-              prob,
-              odds.seedPool,
-              odds.houseEdge
-            );
-      const blended = blendOdds(
-        stat,
-        pari,
-        totalPool,
-        odds.parimutuelThreshold
+      pools.push(Number(selRow?.pool ?? 0));
+    }
+    const totalPool = pools.reduce((a, b) => a + b, 0);
+
+    // What the ratings think, recovered from the opening prices.
+    const model = sels.map(
+      (sel) =>
+        probabilityFromOdds(Number(sel.statOdds), odds.houseEdge) ??
+        1 / Math.max(sels.length, 1)
+    );
+    const probs = marketProbabilities(
+      model,
+      pools,
+      moneyWeight(totalPool, odds.parimutuelThreshold, odds.moneyWeight)
+    );
+
+    for (let i = 0; i < sels.length; i++) {
+      const sel = sels[i]!;
+      const p = probs[i]!;
+      const final = clampOdds(
+        p > 0 ? probabilityToOdds(Math.min(p, 0.999999), odds.houseEdge) : odds.maxOdds,
+        odds.minOdds,
+        odds.maxOdds
       );
-      const final = clampOdds(blended, odds.minOdds, odds.maxOdds);
+      // Informational only: what a straight tote payout would have been.
+      const pari = parimutuelOdds(totalPool, pools[i]!, odds.houseEdge);
       await this.db
         .update(marketSelections)
         .set({

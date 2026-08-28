@@ -2,7 +2,7 @@ import { z } from "zod";
 import {
   DEFAULT_MAX_ODDS,
   DEFAULT_MIN_ODDS,
-  DEFAULT_ODDS_SEED_POOL,
+  DEFAULT_MONEY_WEIGHT,
 } from "@/lib/odds";
 
 const OddBestOf = z
@@ -26,9 +26,11 @@ export const TournamentConfigSchema = z
     startingCapital: z.number().min(0).max(1_000_000),
     parimutuelThreshold: z.number().min(0).max(1_000_000),
     houseEdge: z.number().min(0).max(0.1),
-    // Virtual pool each selection is seeded with, in jablka. Bigger =
-    // kurz reacts more slowly to incoming money. 0 disables seeding.
-    oddsSeedPool: z.number().min(0).max(1_000_000).default(500),
+    // Largest share of the price the money is ever allowed to set, with the
+    // ratings holding the rest. 0.5 = model and money are equal partners on
+    // a deep pool; 0 pins the kurz to the ratings and ignores the pool.
+    // Below 1 by construction, so no single stake can take the book over.
+    oddsMoneyWeight: z.number().min(0).max(0.9).default(0.5),
     // Hard band the published kurz is held inside.
     minOdds: z.number().min(1.01).max(2).default(1.1),
     maxOdds: z.number().min(2).max(1000).default(25),
@@ -79,7 +81,7 @@ export function defaultTournamentConfig(): TournamentConfig {
     startingCapital: 1000,
     parimutuelThreshold: 5000,
     houseEdge: 0,
-    oddsSeedPool: 500,
+    oddsMoneyWeight: 0.5,
     minOdds: 1.1,
     maxOdds: 25,
     totalLegsLineDelta: 0.5,
@@ -99,7 +101,7 @@ export function defaultTournamentConfig(): TournamentConfig {
 }
 
 export type OddsBalanceConfig = {
-  seedPool: number;
+  moneyWeight: number;
   minOdds: number;
   maxOdds: number;
   houseEdge: number;
@@ -122,7 +124,10 @@ export function resolveOddsConfig(
   const minOdds = num(cfg?.minOdds, DEFAULT_MIN_ODDS);
   const maxOdds = num(cfg?.maxOdds, DEFAULT_MAX_ODDS);
   return {
-    seedPool: Math.max(0, num(cfg?.oddsSeedPool, DEFAULT_ODDS_SEED_POOL)),
+    moneyWeight: Math.min(
+      0.9,
+      Math.max(0, num(cfg?.oddsMoneyWeight, DEFAULT_MONEY_WEIGHT))
+    ),
     minOdds,
     // never hand clampOdds an inverted band
     maxOdds: Math.max(maxOdds, minOdds),
