@@ -8,6 +8,10 @@ import {
   type Player,
 } from "@/db/schema";
 import type { DB } from "@/db/client";
+import {
+  resolveCompetitorByName,
+  resolveCompetitorForUser,
+} from "@/lib/competitor";
 
 export class PlayerService {
   constructor(private readonly db: DB) {}
@@ -35,6 +39,10 @@ export class PlayerService {
   async add(tournamentId: string, name: string, avatarUrl?: string): Promise<Player> {
     if (!name.trim()) throw new Error("player name required");
     await this.requireDraft(tournamentId);
+    // Seed from the competitor record so this player carries their real
+    // rating in. Without it every player sits at the 1500 default, every
+    // pairing is a 50/50, and the whole board opens at kurz 2.00.
+    const competitor = await resolveCompetitorByName(this.db, name);
     const [row] = await this.db
       .insert(players)
       .values({
@@ -42,6 +50,8 @@ export class PlayerService {
         name: name.trim(),
         avatarUrl: avatarUrl ?? null,
         userId: null,
+        competitorId: competitor.id,
+        eloRating: competitor.eloRating,
       })
       .returning();
     if (!row) throw new Error("failed to add player");
@@ -62,13 +72,19 @@ export class PlayerService {
     const fn = (u.firstName ?? "").trim();
     const ln = (u.lastName ?? "").trim();
     const fullName = `${fn} ${ln}`.trim();
+    const name = fullName.length > 0 ? fullName : u.username;
+    // Same reason as add(): pull the carried rating in, otherwise everyone
+    // enters at 1500 and every market opens at an even 2.00.
+    const competitor = await resolveCompetitorForUser(this.db, u.id, name);
     const [row] = await this.db
       .insert(players)
       .values({
         tournamentId,
         userId: u.id,
-        name: fullName.length > 0 ? fullName : u.username,
+        name,
         avatarUrl: u.avatarUrl,
+        competitorId: competitor.id,
+        eloRating: competitor.eloRating,
       })
       .returning();
     if (!row) throw new Error("failed to add player");

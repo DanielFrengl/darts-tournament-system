@@ -1,7 +1,15 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import { eq } from "drizzle-orm";
 import { setupTestDb, truncateAll, teardownTestDb, testDb } from "../setup/db";
-import { matches, markets, marketSelections, bets, users, transactions } from "@/db/schema";
+import {
+  appSettings,
+  matches,
+  markets,
+  marketSelections,
+  bets,
+  users,
+  transactions,
+} from "@/db/schema";
 import { createUser } from "../setup/factories";
 import { TournamentService } from "@/lib/tournament";
 import { PlayerService } from "@/lib/player";
@@ -25,6 +33,17 @@ beforeEach(async () => {
 afterAll(async () => {
   await teardownTestDb();
 });
+
+/** BettingService reads the ceiling straight off the settings singleton. */
+async function setMaxBet(amount: number) {
+  await testDb
+    .insert(appSettings)
+    .values({ id: 1, maxBet: amount.toFixed(2) })
+    .onConflictDoUpdate({
+      target: appSettings.id,
+      set: { maxBet: amount.toFixed(2) },
+    });
+}
 
 async function setupBettableMatch() {
   const t = await tournamentService.create({ name: "T", config: defaultTournamentConfig() });
@@ -82,12 +101,22 @@ describe("BettingService.placeBet", () => {
     expect(r.ok).toBe(false);
   });
 
-  it("rejects stake exceeding max_stake_pct of capital", async () => {
-    const u = await createUser({ capital: "100" });
+  // The old percentage-of-capital cap is gone; the settings max bet is the
+  // only ceiling left, and it is an absolute amount rather than a share.
+  it("rejects stake exceeding the configured absolute max bet", async () => {
+    const u = await createUser({ capital: "1000" });
+    await setMaxBet(50);
     const { matchWinnerSelections } = await setupBettableMatch();
     const r = await bettingService.placeBet(u.id, matchWinnerSelections[0]!.id, 80);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toMatch(/max/i);
+  });
+
+  it("allows a large stake when no max bet is configured", async () => {
+    const u = await createUser({ capital: "1000" });
+    const { matchWinnerSelections } = await setupBettableMatch();
+    const r = await bettingService.placeBet(u.id, matchWinnerSelections[0]!.id, 800);
+    expect(r.ok).toBe(true);
   });
 
   it("rejects stake larger than balance", async () => {
@@ -167,12 +196,15 @@ describe("BettingService settlement", () => {
       true
     );
 
-    // Pool is empty again → parimutuel component cleared.
+    // Pool is empty again. The seed pool means the parimutuel component no
+    // longer goes undefined — it collapses back to 1/p — so the published
+    // kurz returns to exactly where it opened.
     const [reloadedSel] = await testDb
       .select()
       .from(marketSelections)
       .where(eq(marketSelections.id, sel.id));
-    expect(reloadedSel?.pariOdds).toBeNull();
+    expect(Number(reloadedSel?.pariOdds)).toBeCloseTo(Number(sel.statOdds), 4);
+    expect(Number(reloadedSel?.finalOdds)).toBeCloseTo(Number(sel.statOdds), 4);
     void matchWinnerMarket;
   });
 

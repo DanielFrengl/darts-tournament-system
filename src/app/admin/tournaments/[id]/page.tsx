@@ -10,6 +10,8 @@ import { matchService } from "@/lib/match";
 import { TournamentControls } from "@/components/admin/TournamentControls";
 import { TournamentAdminActions } from "@/components/admin/TournamentAdminActions";
 import { AdvancePerGroupFix } from "@/components/admin/AdvancePerGroupFix";
+import { RoundLengthCard } from "@/components/admin/RoundLengthCard";
+import { RatingResyncCard } from "@/components/admin/RatingResyncCard";
 import { WizardNav } from "@/components/admin/WizardNav";
 import { auth } from "@/lib/auth";
 import { isDebug } from "@/lib/roles";
@@ -37,6 +39,11 @@ export default async function AdminTournamentDetail({
     groupMatches.every((m) => m.status === "finished" || m.status === "cancelled");
   const needsBracketFallback =
     t.status === "groups" && groupsDone && playoffMatches.length === 0;
+  // Nobody has a rating edge over anybody: every pairing prices at 50/50 and
+  // the whole board opens at kurz 2.00.
+  const flatRatings =
+    players.length > 1 &&
+    players.every((p) => p.eloRating === players[0]!.eloRating);
 
   return (
     <div className="space-y-4">
@@ -73,6 +80,10 @@ export default async function AdminTournamentDetail({
         />
       )}
 
+      {t.status !== "finished" && (
+        <RatingResyncCard tournamentId={id} flatRatings={flatRatings} />
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Stav</CardTitle>
@@ -100,14 +111,6 @@ export default async function AdminTournamentDetail({
             <dd>{t.configJson.groupCount}</dd>
             <dt className="text-muted-foreground">Postupuje ze skupiny</dt>
             <dd>{t.configJson.advancePerGroup}</dd>
-            <dt className="text-muted-foreground">Skupina best of</dt>
-            <dd>{t.configJson.bestOfGroup}</dd>
-            <dt className="text-muted-foreground">Čtvrtfinále</dt>
-            <dd>{t.configJson.bestOfQuarter}</dd>
-            <dt className="text-muted-foreground">Semifinále</dt>
-            <dd>{t.configJson.bestOfSemi}</dd>
-            <dt className="text-muted-foreground">Finále</dt>
-            <dd>{t.configJson.bestOfFinal}</dd>
             <dt className="text-muted-foreground">3. místo</dt>
             <dd>{t.configJson.thirdPlaceMatch ? "ano" : "ne"}</dd>
             <dt className="text-muted-foreground">Startovní kapitál</dt>
@@ -115,6 +118,36 @@ export default async function AdminTournamentDetail({
           </dl>
         </CardContent>
       </Card>
+
+      {t.status !== "finished" ? (
+        <RoundLengthCard
+          tournamentId={id}
+          bestOf={{
+            group: t.configJson.bestOfGroup,
+            quarter: t.configJson.bestOfQuarter,
+            semi: t.configJson.bestOfSemi,
+            final: t.configJson.bestOfFinal,
+          }}
+        />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Počet legů</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+              <dt className="text-muted-foreground">Skupina</dt>
+              <dd>best of {t.configJson.bestOfGroup}</dd>
+              <dt className="text-muted-foreground">Čtvrtfinále</dt>
+              <dd>best of {t.configJson.bestOfQuarter}</dd>
+              <dt className="text-muted-foreground">Semifinále</dt>
+              <dd>best of {t.configJson.bestOfSemi}</dd>
+              <dt className="text-muted-foreground">Finále</dt>
+              <dd>best of {t.configJson.bestOfFinal}</dd>
+            </dl>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
