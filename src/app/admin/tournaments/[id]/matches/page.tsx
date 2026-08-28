@@ -131,6 +131,10 @@ export default async function MatchesPage({
       phaseLabel: labelPhase(m.phase),
       playerA: m.playerA?.name ?? "?",
       playerB: m.playerB?.name ?? "?",
+      // Cancelling zeroes the match score, so count the legs themselves.
+      legsPlayed: m.legs.filter((l) => l.winnerId).length,
+      scoreA: m.legs.filter((l) => l.winnerId === m.playerA?.id).length,
+      scoreB: m.legs.filter((l) => l.winnerId === m.playerB?.id).length,
     }));
 
   const groupMatches = active.filter((m) => m.phase === "group");

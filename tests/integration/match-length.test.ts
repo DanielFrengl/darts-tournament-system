@@ -13,7 +13,11 @@ import {
   setMatchBestOf,
   setPhaseBestOf,
 } from "@/lib/match-lifecycle";
-import { cancelMatchWithMarkets } from "@/lib/leg";
+import {
+  cancelMatchWithMarkets,
+  recordLegAndAdvance,
+  startLegWithMarkets,
+} from "@/lib/leg";
 import { defaultTournamentConfig } from "@/lib/tournament-config";
 
 const tournamentService = new TournamentService(testDb);
@@ -300,5 +304,124 @@ describe("setPhaseBestOf", () => {
       .where(eq(tournaments.id, t.id));
 
     await expect(setPhaseBestOf(t.id, "semi", 7)).rejects.toThrow(/dohran/i);
+  });
+});
+
+describe("restoring a match that was already being played", () => {
+  /** Play `recorded` legs, leave one running, then cancel the match. */
+  async function cancelledMidMatch(recorded: number, bestOf = 5) {
+    const { t, a, b } = await playoffTournament();
+    const m = await addMatch(t.id, a.id, b.id, "semi", bestOf);
+    await marketService.createForMatch(m.id);
+    for (let i = 0; i < recorded; i++) {
+      const leg = await startLegWithMarkets(m.id);
+      await recordLegAndAdvance(leg.id, a.id);
+    }
+    const running = await startLegWithMarkets(m.id);
+    await cancelMatchWithMarkets(m.id);
+    return { t, a, b, match: m, runningLeg: running };
+  }
+
+  it("comes back live, keeping the legs that were actually played", async () => {
+    const { a, match } = await cancelledMidMatch(2);
+
+    const r = await restoreMatch(match.id);
+
+    expect(r.status).toBe("live");
+    expect(r.scoreA).toBe(2);
+    expect(r.scoreB).toBe(0);
+    const [reloaded] = await testDb
+      .select()
+      .from(matches)
+      .where(eq(matches.id, match.id));
+    expect(reloaded!.status).toBe("live");
+    expect(reloaded!.scoreA).toBe(2);
+    expect(reloaded!.winnerId).toBeNull();
+    expect(reloaded!.finishedAt).toBeNull();
+    void a;
+  });
+
+  it("hands the interrupted leg back to the scorer as live", async () => {
+    const { match, runningLeg } = await cancelledMidMatch(1);
+
+    const r = await restoreMatch(match.id);
+
+    expect(r.resumedLeg).toBe(2);
+    const [leg] = await testDb
+      .select()
+      .from(legs)
+      .where(eq(legs.id, runningLeg.id));
+    expect(leg!.status).toBe("live");
+    expect(leg!.winnerId).toBeNull();
+    expect(leg!.finishedAt).toBeNull();
+  });
+
+  it("leaves the played legs settled — their payouts were never taken back", async () => {
+    const { match } = await cancelledMidMatch(2);
+
+    await restoreMatch(match.id);
+
+    const all = await marketService.listByMatch(match.id);
+    const legMarkets = all.filter((x) => x.type === "leg_winner");
+    const settled = legMarkets.filter((x) => x.status === "settled");
+    const open = legMarkets.filter((x) => x.status === "open");
+    expect(settled).toHaveLength(2); // the two recorded legs
+    expect(open).toHaveLength(1); // the interrupted one, refunded and reopened
+  });
+
+  it("keeps pre-match betting shut, because the match had already started", async () => {
+    const { match } = await cancelledMidMatch(1);
+
+    await restoreMatch(match.id);
+
+    const all = await marketService.listByMatch(match.id);
+    for (const type of ["match_winner", "correct_score"]) {
+      const mk = all.find((x) => x.type === type)!;
+      expect(mk.status).toBe("closed");
+    }
+  });
+
+  it("still restores a never-started match straight to scheduled and open", async () => {
+    const { t, a, b } = await playoffTournament();
+    const m = await addMatch(t.id, a.id, b.id, "semi", 5);
+    await marketService.createForMatch(m.id);
+    await cancelMatchWithMarkets(m.id);
+
+    const r = await restoreMatch(m.id);
+
+    expect(r.status).toBe("scheduled");
+    expect(r.resumedLeg).toBeNull();
+    const all = await marketService.listByMatch(m.id);
+    expect(all.filter((x) => x.status === "open")).toHaveLength(2);
+  });
+
+  it("comes back finished when the recorded legs already decide it", async () => {
+    // bo3, both legs to A: the match was over when it was cancelled.
+    const { t, a, b } = await playoffTournament();
+    const m = await addMatch(t.id, a.id, b.id, "semi", 3);
+    await marketService.createForMatch(m.id);
+    for (let i = 0; i < 2; i++) {
+      const leg = await startLegWithMarkets(m.id);
+      await recordLegAndAdvance(leg.id, a.id);
+    }
+    await cancelMatchWithMarkets(m.id);
+
+    const r = await restoreMatch(m.id);
+
+    expect(r.status).toBe("finished");
+    expect(r.scoreA).toBe(2);
+    const [reloaded] = await testDb
+      .select()
+      .from(matches)
+      .where(eq(matches.id, m.id));
+    expect(reloaded!.winnerId).toBe(a.id);
+    expect(reloaded!.finishedAt).not.toBeNull();
+    void b;
+  });
+
+  it("refuses a match that is not cancelled", async () => {
+    const { t, a, b } = await playoffTournament();
+    const m = await addMatch(t.id, a.id, b.id, "semi", 5);
+    await expect(restoreMatch(m.id)).rejects.toThrow(/zrušen/i);
   });
 });
