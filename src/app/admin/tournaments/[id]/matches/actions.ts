@@ -15,6 +15,7 @@ import {
   restoreMatch,
   closeLegBetting,
   setMatchBestOf,
+  type RestoredMatch,
 } from "@/lib/match-lifecycle";
 import { publish } from "@/lib/event-bus";
 import { isAdmin } from "@/lib/roles";
@@ -180,22 +181,26 @@ export async function cancelMatchAction(
 }
 
 /**
- * Undo an accidental cancellation: put the match back to "scheduled" and
- * re-open its betting markets. Only works for matches that hadn't started.
+ * Undo an accidental cancellation. A match that had never started goes back
+ * to scheduled with its books reopened; one that was already being played
+ * comes back live, with the legs it had recorded intact and the leg that was
+ * cut off handed back to the scorer.
  */
 export async function restoreMatchAction(
   tournamentId: string,
   matchId: string
-): Promise<Result> {
+): Promise<
+  ({ ok: true } & RestoredMatch) | { ok: false; error: string }
+> {
   if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
   try {
-    await restoreMatch(matchId);
+    const restored = await restoreMatch(matchId);
     revalidatePath(`/admin/tournaments/${tournamentId}/matches`);
     revalidatePath(`/admin/tournaments/${tournamentId}/play`);
     revalidatePath("/tournament");
     revalidatePath("/sazeni");
     revalidatePath("/display");
-    return { ok: true };
+    return { ok: true, ...restored };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Failed" };
   }

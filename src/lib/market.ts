@@ -585,38 +585,62 @@ export class MarketService {
   }
 
   /**
-   * Re-open the pre-match markets (match_winner + correct_score) that were
-   * cancelled — used when an accidentally cancelled match is restored.
-   * Only scope="match" markets are touched (leg markets stay as-is).
-   * Returns how many markets were reopened.
+   * Put a cancelled match's books back where they were before the cancel.
+   *
+   * Each market is restored to the state its own data implies, rather than
+   * blanket-reopened:
+   *   - selections carrying an isWinner verdict were settled, and their
+   *     payouts were never clawed back, so they go back to settled;
+   *   - a pre-match book on a match that had already started goes back to
+   *     closed — betting on the winner shut when leg 1 began;
+   *   - anything else reopens.
+   *
+   * A pre-match book cancelled because the match length changed has already
+   * been replaced, so restoring it would put a stale price (for the old
+   * best-of) back on the board next to the current one. Per type, only the
+   * newest cancelled market is eligible, and only when nothing live replaced
+   * it. Leg books have one market per leg, so that question doesn't arise.
+   *
+   * Returns how many markets were restored.
    */
-  async reopenMatchMarkets(matchId: string): Promise<number> {
+  async restoreMatchMarkets(
+    matchId: string,
+    opts: { started: boolean }
+  ): Promise<number> {
     const ms = await this.db
       .select()
       .from(markets)
-      .where(and(eq(markets.matchId, matchId), eq(markets.scope, "match")));
+      .where(eq(markets.matchId, matchId));
 
-    // A market cancelled because the match length changed has already been
-    // replaced, so reopening it would put a stale book (priced for the old
-    // best-of) back on the board next to the current one. Per type, reopen
-    // only the newest cancelled market, and only when nothing live replaced it.
-    const reopenable: typeof ms = [];
-    for (const type of new Set(ms.map((m) => m.type))) {
-      const ofType = ms.filter((m) => m.type === type);
+    const eligible: typeof ms = [];
+    const matchScope = ms.filter((m) => m.scope === "match");
+    for (const type of new Set(matchScope.map((m) => m.type))) {
+      const ofType = matchScope.filter((m) => m.type === type);
       if (ofType.some((m) => m.status !== "cancelled")) continue;
-      const newest = ofType.reduce((a, b) =>
-        a.opensAt >= b.opensAt ? a : b
-      );
-      reopenable.push(newest);
+      eligible.push(ofType.reduce((a, b) => (a.opensAt >= b.opensAt ? a : b)));
+    }
+    for (const m of ms) {
+      if (m.scope !== "match" && m.status === "cancelled") eligible.push(m);
     }
 
-    for (const m of reopenable) {
+    for (const m of eligible) {
+      const sels = await this.getSelections(m.id);
+      const wasSettled = sels.some((s) => s.isWinner !== null);
+      const status = wasSettled
+        ? "settled"
+        : m.scope === "match" && opts.started
+          ? "closed"
+          : "open";
       await this.db
         .update(markets)
-        .set({ status: "open", closesAt: null, settledAt: null })
+        .set({
+          status,
+          closesAt: status === "open" ? null : (m.closesAt ?? new Date()),
+          settledAt: status === "settled" ? (m.settledAt ?? new Date()) : null,
+        })
         .where(eq(markets.id, m.id));
     }
-    return reopenable.length;
+    return eligible.length;
   }
 
   /**

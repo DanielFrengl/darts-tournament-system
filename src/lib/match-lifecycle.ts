@@ -308,35 +308,91 @@ async function clawbackPayout(
 }
 
 /**
- * Undo an accidental cancellation: put the match back to "scheduled" and
- * re-open its pre-match markets so people can bet again. Only supported for
- * matches that hadn't been played yet (no legs) — restoring a match that had
- * real play would need score/leg/settlement reconstruction we don't do.
+ * Undo an accidental cancellation, including of a match that was already
+ * being played.
+ *
+ * Cancelling a live match force-finishes whatever leg was running (leaving
+ * it finished with no winner) and voids every book attached to the match.
+ * Restoring walks that back from the legs themselves, which are the record
+ * of what actually happened:
+ *
+ *   - legs carrying a winner were genuinely played, so they stand and the
+ *     score is recomputed from them;
+ *   - the leg with no winner is the one that was interrupted, so it goes
+ *     back to live for the scorer to finish;
+ *   - the match returns to live, or to scheduled if it had never started,
+ *     or straight back to finished when the legs already decide it.
+ *
+ * Books are restored to the state their own data implies — see
+ * `restoreMatchMarkets`. Already-settled leg payouts were never clawed back
+ * on cancellation, so they stay paid and their market goes back to settled
+ * rather than being played for twice.
  */
-export async function restoreMatch(matchId: string): Promise<void> {
+export type RestoredMatch = {
+  status: "scheduled" | "live" | "finished";
+  scoreA: number;
+  scoreB: number;
+  /** Leg number handed back to the scorer to finish, if one was cut off. */
+  resumedLeg: number | null;
+};
+
+export async function restoreMatch(
+  matchId: string
+): Promise<RestoredMatch> {
   const [m] = await db.select().from(matches).where(eq(matches.id, matchId));
   if (!m) throw new Error("Zápas nenalezen");
   if (m.status !== "cancelled") throw new Error("Vrátit lze jen zrušený zápas");
+
   const legRows = await db.select().from(legs).where(eq(legs.matchId, matchId));
-  if (legRows.length > 0) {
-    throw new Error("Zápas už měl rozehrané legy — vrácení není podporováno");
-  }
+  const played = legRows.filter((l) => l.winnerId);
+  const interrupted = legRows.filter((l) => !l.winnerId);
+  const started = legRows.length > 0;
+
+  const scoreA = played.filter((l) => l.winnerId === m.playerAId).length;
+  const scoreB = played.filter((l) => l.winnerId === m.playerBId).length;
+  const target = Math.ceil(m.bestOf / 2);
+  const decided = scoreA >= target || scoreB >= target;
+  const winnerId = !decided
+    ? null
+    : scoreA >= target
+      ? m.playerAId
+      : m.playerBId;
 
   await db
     .update(matches)
-    .set({ status: "scheduled", finishedAt: null, scoreA: 0, scoreB: 0, winnerId: null })
+    .set({
+      status: decided ? "finished" : started ? "live" : "scheduled",
+      scoreA,
+      scoreB,
+      winnerId,
+      finishedAt: decided ? (m.finishedAt ?? new Date()) : null,
+    })
     .where(eq(matches.id, matchId));
 
-  // Re-open the markets cancelled on cancellation; if none exist (e.g. the
-  // match was cancelled before its markets were ever created), make them.
-  const reopened = await marketService.reopenMatchMarkets(matchId);
-  if (reopened === 0) {
+  // The leg that was running when the cancel landed goes back to live.
+  for (const leg of interrupted) {
+    await db
+      .update(legs)
+      .set({ status: "live", winnerId: null, finishedAt: null })
+      .where(eq(legs.id, leg.id));
+  }
+
+  const restored = await marketService.restoreMatchMarkets(matchId, { started });
+  // A match cancelled before its books were ever created still needs them.
+  if (restored === 0 && !started) {
     await marketService.createForMatch(matchId);
   }
 
   publish(`match:${matchId}`, "restored");
   const summary = await buildMatchSummary(matchId);
   publish(`tournament:${m.tournamentId}`, "match_restored", { matchId, summary });
+
+  return {
+    status: decided ? "finished" : started ? "live" : "scheduled",
+    scoreA,
+    scoreB,
+    resumedLeg: interrupted[0]?.legNumber ?? null,
+  };
 }
 
 /** Longest match the config schema allows; keep the two in step. */

@@ -14,6 +14,10 @@ export type CancelledMatchVM = {
   phaseLabel: string;
   playerA: string;
   playerB: string;
+  /** Legs with a recorded winner at the moment it was cancelled. */
+  legsPlayed: number;
+  scoreA: number;
+  scoreB: number;
 };
 
 export function CancelledMatchesCard({
@@ -31,12 +35,20 @@ export function CancelledMatchesCard({
   function restore(matchId: string) {
     start(async () => {
       const r = await restoreMatchAction(tournamentId, matchId);
-      if (r.ok) {
-        toast.success("Zápas vrácen mezi naplánované");
-        router.refresh();
-      } else {
+      if (!r.ok) {
         toast.error(r.error);
+        return;
       }
+      toast.success(
+        r.status === "scheduled"
+          ? "Zápas vrácen mezi naplánované"
+          : r.status === "finished"
+            ? `Zápas vrácen jako dohraný ${r.scoreA}:${r.scoreB}`
+            : r.resumedLeg != null
+              ? `Zápas vrácen živě ${r.scoreA}:${r.scoreB} — dohraj leg ${r.resumedLeg}`
+              : `Zápas vrácen živě ${r.scoreA}:${r.scoreB}`
+      );
+      router.refresh();
     });
   }
 
@@ -62,6 +74,11 @@ export function CancelledMatchesCard({
                 <span className="text-xs uppercase tracking-wider text-muted-foreground">
                   {m.phaseLabel}
                 </span>
+                {m.legsPlayed > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    rozehraný {m.scoreA}:{m.scoreB}
+                  </span>
+                )}
               </span>
               <Button
                 size="sm"
