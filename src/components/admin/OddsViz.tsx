@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { SimResult } from "@/lib/tournament-sim";
+import type { SimResult, SimStage } from "@/lib/tournament-sim";
 import {
   Card,
   CardContent,
@@ -10,8 +10,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-const PHASES = ["Skupina", "Čtvrtfinále", "Semifinále", "Finále", "Vítěz"];
-const PLACE_BUCKETS = ["Vítěz", "Finále", "Semifinále", "Čtvrtfinále", "Skupina"];
+// The simulation reports the stages this tournament actually has — a
+// four-player playoff has no quarterfinal — so the columns are labelled from
+// its answer instead of a fixed five.
+const STAGE_LABEL: Record<SimStage, string> = {
+  group: "Skupina",
+  quarter: "Čtvrtfinále",
+  semi: "Semifinále",
+  final: "Finále",
+  champion: "Vítěz",
+};
 
 /**
  * Colors resolved from the app's theme tokens so the charts match the rest of
@@ -116,6 +124,11 @@ export function OddsViz({
   houseEdge: number;
 }) {
   const ids = Object.keys(names);
+  const stages = sim.stages ?? ["group", "quarter", "semi", "final", "champion"];
+  const phaseLabels = stages.map((s) => STAGE_LABEL[s] ?? s);
+  // Placement buckets are the reach stages read from the other end: champion
+  // first, knocked out in the groups last.
+  const placeLabels = [...phaseLabels].reverse();
   const theme = useThemeColors();
   // Distinct line colors for the convergence chart: emphasis on the top
   // favorite (foreground) plus two mid-tone neutrals from the chart ramp.
@@ -204,16 +217,17 @@ export function OddsViz({
     if (!theme) return;
     const rows = ids
       .map((id) => ({ name: names[id]!, vals: sim.reachProb[id] ?? [] }))
-      .sort((a, b) => (b.vals[4] ?? 0) - (a.vals[4] ?? 0));
+      // Champion is the last stage, whatever the bracket's depth.
+      .sort((a, b) => (b.vals[b.vals.length - 1] ?? 0) - (a.vals[a.vals.length - 1] ?? 0));
     const left = 70;
     const top = 22;
     const right = 8;
     const bottom = 6;
-    const cw = (w - left - right) / PHASES.length;
+    const cw = (w - left - right) / Math.max(phaseLabels.length, 1);
     const rh = (h - top - bottom) / Math.max(rows.length, 1);
     ctx.font = "10px ui-sans-serif, system-ui";
     ctx.textBaseline = "middle";
-    PHASES.forEach((ph, c) => {
+    phaseLabels.forEach((ph, c) => {
       ctx.fillStyle = theme.muted;
       ctx.textAlign = "center";
       ctx.fillText(ph, left + cw * c + cw / 2, 12);
@@ -291,7 +305,7 @@ export function OddsViz({
       <ChartCard title="Rozdělení umístění" hint="Kde hráč nejčastěji skončí.">
         <canvas ref={placeRef} height={430} className="w-full" />
         <Legend
-          items={PLACE_BUCKETS.map((b, i) => ({
+          items={placeLabels.map((b, i) => ({
             color: theme?.series[i] ?? "currentColor",
             label: b,
           }))}
