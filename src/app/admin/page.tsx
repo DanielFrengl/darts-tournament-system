@@ -89,7 +89,10 @@ export default async function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Admin přehled" />
+      <PageHeader
+        title="Admin přehled"
+        description="Stav systému a rychlé akce pro aktivní turnaj."
+      />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Uživatelé" value={String(userCount)} />
@@ -102,20 +105,20 @@ export default async function AdminDashboard() {
         />
       </div>
 
-      {activeStats ? (
+      {activeStats && t ? (
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-row items-start justify-between gap-4">
             <div className="space-y-1">
               <CardTitle>{activeStats.name}</CardTitle>
               <StatusBadge kind="tournament" status={activeStats.status} />
             </div>
             <Button
               variant="outline"
-              render={<Link href={`/admin/tournaments`}>Otevřít</Link>}
+              render={<Link href={`/admin/tournaments/${t.id}`}>Otevřít</Link>}
             />
           </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-3">
               <Stat label="Hráči" value={String(activeStats.players)} />
               <Stat
                 label="Zápasy"
@@ -128,6 +131,32 @@ export default async function AdminDashboard() {
               />
               <Stat label="Otevřené trhy" value={String(activeStats.openMarkets)} />
             </div>
+            {/* The jobs an admin actually opens this page to do. */}
+            <div className="flex flex-wrap gap-2">
+              {activeStats.status !== "finished" && (
+                <Button
+                  render={<Link href={`/admin/tournaments/${t.id}/play`}>▶ Skórovat</Link>}
+                />
+              )}
+              <Button
+                variant="outline"
+                render={
+                  <Link href={`/admin/tournaments/${t.id}/matches`}>Zápasy</Link>
+                }
+              />
+              <Button
+                variant="outline"
+                render={
+                  <Link href={`/admin/tournaments/${t.id}/players`}>Hráči</Link>
+                }
+              />
+              <Button
+                variant="outline"
+                render={
+                  <Link href={`/admin/tournaments/${t.id}/odds-viz`}>Kurzy</Link>
+                }
+              />
+            </div>
           </CardContent>
         </Card>
       ) : (
@@ -135,7 +164,11 @@ export default async function AdminDashboard() {
           <CardHeader>
             <CardTitle>Žádný aktivní turnaj</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Vytvoř turnaj, přidej hráče a spusť skupinovou fázi — sázení se
+              otevře samo.
+            </p>
             <Button
               render={<Link href="/admin/tournaments/new">+ Vytvořit turnaj</Link>}
             />

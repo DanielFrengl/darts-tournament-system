@@ -4,6 +4,7 @@ import { db } from "@/db/client";
 import { players } from "@/db/schema";
 import { tournamentService } from "@/lib/tournament";
 import { simulateTournament, type SimConfig } from "@/lib/tournament-sim";
+import { loadGroupDraw } from "@/lib/sim-draw";
 import type { TournamentConfig } from "@/lib/tournament-config";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,10 +60,13 @@ export default async function SancePage() {
     thirdPlaceMatch: cfg.thirdPlaceMatch,
   };
 
+  // Simulate the tournament that is actually being played: once the groups
+  // are drawn, keep them.
+  const draw = await loadGroupDraw(db, t.id);
   const sim = simulateTournament(
     ps.map((p) => ({ id: p.id, name: p.name, eloRating: p.eloRating })),
     simCfg,
-    { runs: 10000 }
+    { runs: 10000, draw }
   );
   const names: Record<string, string> = {};
   for (const p of ps) names[p.id] = p.name;

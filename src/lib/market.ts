@@ -27,6 +27,7 @@ import {
   type TournamentConfig,
 } from "@/lib/tournament-config";
 import { simulateTournament, type SimConfig } from "@/lib/tournament-sim";
+import { loadGroupDraw } from "@/lib/sim-draw";
 import { publish } from "@/lib/event-bus";
 
 type SelectionDraft = {
@@ -225,10 +226,13 @@ export class MarketService {
     if (!t) return;
     const cfg = t.configJson as TournamentConfig;
 
+    // Futures open once the groups are drawn, so price the draw that
+    // happened rather than an average over draws that did not.
+    const draw = await loadGroupDraw(this.db, tournamentId);
     const sim = simulateTournament(
       tPlayers.map((p) => ({ id: p.id, name: p.name, eloRating: p.eloRating })),
       toSimConfig(cfg),
-      { runs: 10000 }
+      { runs: 10000, draw }
     );
 
     await this.insertMarket(
@@ -279,10 +283,13 @@ export class MarketService {
     if (cfg.thirdPlaceMatch && !existingTypes.has("tournament_third"))
       placeMarkets.push({ type: "tournament_third" });
 
+    // Futures open once the groups are drawn, so price the draw that
+    // happened rather than an average over draws that did not.
+    const draw = await loadGroupDraw(this.db, tournamentId);
     const sim = simulateTournament(
       tPlayers.map((p) => ({ id: p.id, name: p.name, eloRating: p.eloRating })),
       toSimConfig(cfg),
-      { runs: 10000 }
+      { runs: 10000, draw }
     );
 
     for (const { type } of placeMarkets) {

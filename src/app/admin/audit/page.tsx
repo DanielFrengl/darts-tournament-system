@@ -29,10 +29,13 @@ export default async function AuditLogPage() {
     .orderBy(desc(transactions.createdAt))
     .limit(200);
 
+  // The handle and the readable name are different things: the profile link
+  // needs the handle, so keep both rather than linking to /u/<full name>.
   const mapped: AuditRow[] = rows.map((r) => ({
     id: r.id,
     createdAt: r.createdAt,
-    username: displayName({
+    username: r.username,
+    displayName: displayName({
       username: r.username,
       firstName: r.firstName,
       lastName: r.lastName,
@@ -41,7 +44,8 @@ export default async function AuditLogPage() {
     amount: r.amount,
     balanceAfter: r.balanceAfter,
     note: r.note,
-    createdByUsername: r.createdByUsername
+    createdByUsername: r.createdByUsername,
+    createdByDisplayName: r.createdByUsername
       ? displayName({
           username: r.createdByUsername,
           firstName: r.createdByFirstName,

@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { players, tournaments } from "@/db/schema";
 import { simulateTournament, type SimConfig } from "@/lib/tournament-sim";
+import { loadGroupDraw } from "@/lib/sim-draw";
 import type { TournamentConfig } from "@/lib/tournament-config";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { OddsViz } from "@/components/admin/OddsViz";
@@ -42,10 +43,13 @@ export default async function OddsVizPage({
     );
   }
 
+  // Simulate the tournament that is actually being played: once the groups
+  // are drawn, keep them.
+  const draw = await loadGroupDraw(db, id);
   const sim = simulateTournament(
     ps.map((p) => ({ id: p.id, name: p.name, eloRating: p.eloRating })),
     simCfg,
-    { runs: 10000 }
+    { runs: 10000, draw }
   );
   const names: Record<string, string> = {};
   for (const p of ps) names[p.id] = p.name;
