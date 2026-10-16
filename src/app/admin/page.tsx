@@ -5,7 +5,14 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { db } from "@/db/client";
-import { users, tournaments, matches, markets, bets, players } from "@/db/schema";
+import {
+  users,
+  tournaments,
+  matches,
+  markets,
+  bets,
+  players,
+} from "@/db/schema";
 import { tournamentService } from "@/lib/tournament";
 
 async function countOf(query: Promise<{ value: number }[]>): Promise<number> {
@@ -13,27 +20,37 @@ async function countOf(query: Promise<{ value: number }[]>): Promise<number> {
   return Number(rows[0]?.value ?? 0);
 }
 
-async function sumOf(query: Promise<{ value: string | null }[]>): Promise<number> {
+async function sumOf(
+  query: Promise<{ value: string | null }[]>,
+): Promise<number> {
   const rows = await query;
   return Number(rows[0]?.value ?? 0);
 }
 
 export default async function AdminDashboard() {
   const userCount = await countOf(db.select({ value: count() }).from(users));
-  const tournamentCount = await countOf(db.select({ value: count() }).from(tournaments));
+  const tournamentCount = await countOf(
+    db.select({ value: count() }).from(tournaments),
+  );
   const t = await tournamentService.getActive();
 
   const betsToday = await countOf(
-    db.select({ value: count() }).from(bets).where(gte(bets.placedAt, startOfToday()))
+    db
+      .select({ value: count() })
+      .from(bets)
+      .where(gte(bets.placedAt, startOfToday())),
   );
   const stakeToday = await sumOf(
-    db.select({ value: sum(bets.stake) }).from(bets).where(gte(bets.placedAt, startOfToday()))
+    db
+      .select({ value: sum(bets.stake) })
+      .from(bets)
+      .where(gte(bets.placedAt, startOfToday())),
   );
   const payoutToday = await sumOf(
     db
       .select({ value: sum(bets.payout) })
       .from(bets)
-      .where(and(gte(bets.placedAt, startOfToday()), eq(bets.status, "won")))
+      .where(and(gte(bets.placedAt, startOfToday()), eq(bets.status, "won"))),
   );
 
   let activeStats: {
@@ -48,28 +65,36 @@ export default async function AdminDashboard() {
 
   if (t) {
     const playerCount = await countOf(
-      db.select({ value: count() }).from(players).where(eq(players.tournamentId, t.id))
+      db
+        .select({ value: count() })
+        .from(players)
+        .where(eq(players.tournamentId, t.id)),
     );
     const matchesTotal = await countOf(
-      db.select({ value: count() }).from(matches).where(eq(matches.tournamentId, t.id))
+      db
+        .select({ value: count() })
+        .from(matches)
+        .where(eq(matches.tournamentId, t.id)),
     );
     const matchesDone = await countOf(
       db
         .select({ value: count() })
         .from(matches)
-        .where(and(eq(matches.tournamentId, t.id), eq(matches.status, "finished")))
+        .where(
+          and(eq(matches.tournamentId, t.id), eq(matches.status, "finished")),
+        ),
     );
     const matchesLive = await countOf(
       db
         .select({ value: count() })
         .from(matches)
-        .where(and(eq(matches.tournamentId, t.id), eq(matches.status, "live")))
+        .where(and(eq(matches.tournamentId, t.id), eq(matches.status, "live"))),
     );
     const openMarkets = await countOf(
       db
         .select({ value: count() })
         .from(markets)
-        .where(and(eq(markets.tournamentId, t.id), eq(markets.status, "open")))
+        .where(and(eq(markets.tournamentId, t.id), eq(markets.status, "open"))),
     );
     activeStats = {
       name: t.name,
@@ -97,7 +122,7 @@ export default async function AdminDashboard() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Uživatelé" value={String(userCount)} />
         <Stat label="Turnaje celkem" value={String(tournamentCount)} />
-        <Stat label="Sázek dnes" value={String(betsToday)} />
+        <Stat label="Sázek dness" value={String(betsToday)} />
         <Stat
           label="Obrat dnes"
           value={fmt.format(stakeToday)}
@@ -129,19 +154,28 @@ export default async function AdminDashboard() {
                     : undefined
                 }
               />
-              <Stat label="Otevřené trhy" value={String(activeStats.openMarkets)} />
+              <Stat
+                label="Otevřené trhy"
+                value={String(activeStats.openMarkets)}
+              />
             </div>
             {/* The jobs an admin actually opens this page to do. */}
             <div className="flex flex-wrap gap-2">
               {activeStats.status !== "finished" && (
                 <Button
-                  render={<Link href={`/admin/tournaments/${t.id}/play`}>▶ Skórovat</Link>}
+                  render={
+                    <Link href={`/admin/tournaments/${t.id}/play`}>
+                      ▶ Skórovat
+                    </Link>
+                  }
                 />
               )}
               <Button
                 variant="outline"
                 render={
-                  <Link href={`/admin/tournaments/${t.id}/matches`}>Zápasy</Link>
+                  <Link href={`/admin/tournaments/${t.id}/matches`}>
+                    Zápasy
+                  </Link>
                 }
               />
               <Button
@@ -153,7 +187,9 @@ export default async function AdminDashboard() {
               <Button
                 variant="outline"
                 render={
-                  <Link href={`/admin/tournaments/${t.id}/odds-viz`}>Kurzy</Link>
+                  <Link href={`/admin/tournaments/${t.id}/odds-viz`}>
+                    Kurzy
+                  </Link>
                 }
               />
             </div>
@@ -170,7 +206,9 @@ export default async function AdminDashboard() {
               otevře samo.
             </p>
             <Button
-              render={<Link href="/admin/tournaments/new">+ Vytvořit turnaj</Link>}
+              render={
+                <Link href="/admin/tournaments/new">+ Vytvořit turnaj</Link>
+              }
             />
           </CardContent>
         </Card>
@@ -190,7 +228,9 @@ function Stat({
 }) {
   return (
     <div className="rounded-lg border bg-card p-4">
-      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
       <p className="mt-1 text-2xl font-bold tabular-nums">{value}</p>
       {sub && <p className="mt-1 text-xs text-muted-foreground">{sub}</p>}
     </div>
