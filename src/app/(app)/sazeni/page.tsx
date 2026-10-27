@@ -14,6 +14,7 @@ import {
 import { auth } from "@/lib/auth";
 import { tournamentService } from "@/lib/tournament";
 import { getMaxBet } from "@/lib/settings";
+import { isMarketBettable } from "@/lib/betting-window";
 import {
   type BuilderGroupVM,
   type BuilderMarketVM,
@@ -90,13 +91,17 @@ async function buildBettingSurfaces(tournamentId: string): Promise<{
   singleGroups: SingleGroupVM[];
   builderGroups: BuilderGroupVM[];
 }> {
-  const openMarkets = await db
+  const openRows = await db
     .select()
     .from(marketsTable)
     .where(
       and(eq(marketsTable.tournamentId, tournamentId), eq(marketsTable.status, "open"))
     )
     .orderBy(asc(marketsTable.scope), asc(marketsTable.opensAt));
+  // A leg market whose 30s window has run out is still `open` in the row —
+  // nothing writes to it — so drop it here rather than offering a bet the
+  // server would refuse.
+  const openMarkets = openRows.filter((m) => isMarketBettable(m));
   if (openMarkets.length === 0) return { singleGroups: [], builderGroups: [] };
 
   const marketIds = openMarkets.map((m) => m.id);
@@ -234,6 +239,7 @@ async function buildBettingSurfaces(tournamentId: string): Promise<{
       status: m.status,
       selections: singleSels,
       totalPool,
+      closesAt: m.closesAt ? m.closesAt.toISOString() : null,
     });
     g.builderMarkets.push({
       id: m.id,

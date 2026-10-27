@@ -29,6 +29,7 @@ import {
 import { simulateTournament, type SimConfig } from "@/lib/tournament-sim";
 import { loadGroupDraw } from "@/lib/sim-draw";
 import { publish } from "@/lib/event-bus";
+import { legBettingDeadline } from "@/lib/betting-window";
 
 type SelectionDraft = {
   label: string;
@@ -175,6 +176,9 @@ export class MarketService {
         type: "leg_winner",
         scope: "leg",
         status: "open",
+        // Shuts on its own 30s after the leg started — nobody is operating
+        // the book, so the deadline travels with the row.
+        closesAt: legBettingDeadline(leg.startedAt ?? new Date()),
       },
       [
         {
@@ -638,11 +642,19 @@ export class MarketService {
         : m.scope === "match" && opts.started
           ? "closed"
           : "open";
+      // A leg book coming back open gets a fresh window: the leg is live
+      // again, and its old deadline is long past.
+      const closesAt =
+        status !== "open"
+          ? (m.closesAt ?? new Date())
+          : m.scope === "leg"
+            ? legBettingDeadline(new Date())
+            : null;
       await this.db
         .update(markets)
         .set({
           status,
-          closesAt: status === "open" ? null : (m.closesAt ?? new Date()),
+          closesAt,
           settledAt: status === "settled" ? (m.settledAt ?? new Date()) : null,
         })
         .where(eq(markets.id, m.id));
@@ -837,6 +849,7 @@ function toSimConfig(cfg: TournamentConfig): SimConfig {
     bestOfSemi: cfg.bestOfSemi,
     bestOfFinal: cfg.bestOfFinal,
     thirdPlaceMatch: cfg.thirdPlaceMatch,
+    groupScoring: cfg.groupScoring,
   };
 }
 

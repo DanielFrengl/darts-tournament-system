@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { db } from "@/db/client";
 import { matches, legs, markets, players, groups } from "@/db/schema";
 import { tournamentService } from "@/lib/tournament";
+import { isMarketBettable } from "@/lib/betting-window";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -97,13 +98,21 @@ export default async function PlayPage({
   const liveLegIds = allLegs.filter((l) => l.status === "live").map((l) => l.id);
   const legWinnerMarkets = liveLegIds.length
     ? await db
-        .select({ legId: markets.legId, status: markets.status })
+        .select({
+          legId: markets.legId,
+          status: markets.status,
+          closesAt: markets.closesAt,
+        })
         .from(markets)
         .where(and(inArray(markets.legId, liveLegIds), eq(markets.type, "leg_winner")))
     : [];
+  // Closed covers the 30s window having run out, not just the status column.
   const legBettingClosed = new Map<string, boolean>();
+  const legBettingClosesAt = new Map<string, string>();
   for (const mk of legWinnerMarkets) {
-    if (mk.legId) legBettingClosed.set(mk.legId, mk.status !== "open");
+    if (!mk.legId) continue;
+    legBettingClosed.set(mk.legId, !isMarketBettable(mk));
+    if (mk.closesAt) legBettingClosesAt.set(mk.legId, mk.closesAt.toISOString());
   }
 
   // Sort by play order: phase → group position → bracket round → bracket position.
@@ -156,6 +165,8 @@ export default async function PlayPage({
       status: l.status,
       winnerId: l.winnerId,
       bettingClosed: l.status === "live" ? legBettingClosed.get(l.id) ?? false : undefined,
+      bettingClosesAt:
+        l.status === "live" ? legBettingClosesAt.get(l.id) ?? null : null,
     })),
     isUpcoming: focused.markedUpcomingAt != null,
     groupName: focused.groupId ? groupMap.get(focused.groupId)?.name ?? null : null,

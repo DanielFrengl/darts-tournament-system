@@ -17,6 +17,11 @@ export const TournamentConfigSchema = z
     groupCount: z.number().int().min(1).max(8),
     groupSize: z.number().int().min(2).max(16),
     advancePerGroup: z.number().int().min(1).max(16),
+    // How the group table awards points. Deliberately optional with no zod
+    // default: updateLiveConfig re-parses a running tournament's config when
+    // the admin changes round lengths, and a default here would silently
+    // switch that tournament onto the new scheme mid-table.
+    groupScoring: z.enum(["win_only", "clean_sweep_bonus"]).optional(),
     bestOfGroup: OddBestOf,
     bestOfQuarter: OddBestOf,
     bestOfSemi: OddBestOf,
@@ -72,6 +77,7 @@ export function defaultTournamentConfig(): TournamentConfig {
     groupCount: 2,
     groupSize: 4,
     advancePerGroup: 2,
+    groupScoring: "win_only",
     bestOfGroup: 3,
     bestOfQuarter: 5,
     bestOfSemi: 5,

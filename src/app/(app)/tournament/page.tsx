@@ -255,6 +255,7 @@ async function loadTournamentFutures(tournamentId: string): Promise<MarketCardVM
       status: m.status,
       selections: mySels,
       totalPool,
+      closesAt: m.closesAt ? m.closesAt.toISOString() : null,
       _order: TOURNAMENT_MARKET_ORDER[m.type] ?? 99,
     };
   });

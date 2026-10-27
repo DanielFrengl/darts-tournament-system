@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useSyncExternalStore,
+  useTransition,
+} from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +21,42 @@ import {
   closeLegBettingAction,
   setMatchBestOfAction,
 } from "@/app/admin/tournaments/[id]/matches/actions";
+
+/**
+ * Counts the 30s leg window down. Shuts itself up at 0; the page refreshes on
+ * the next live event and the badge takes over. Server snapshot is null so
+ * nothing renders server-side for hydration to disagree with.
+ */
+function LegBettingCountdown({ closesAt }: { closesAt: string | null }) {
+  const deadline = closesAt === null ? null : Date.parse(closesAt);
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      if (deadline === null) return () => {};
+      const id = setInterval(onChange, 500);
+      return () => clearInterval(id);
+    },
+    [deadline]
+  );
+  const getSnapshot = useCallback(
+    () =>
+      deadline === null
+        ? null
+        : Math.max(0, Math.ceil((deadline - Date.now()) / 1000)),
+    [deadline]
+  );
+  const left = useSyncExternalStore(subscribe, getSnapshot, () => null);
+  if (left === null) return null;
+  return (
+    <span
+      className={`font-mono text-xs tabular-nums ${
+        left <= 10 ? "text-destructive" : "text-muted-foreground"
+      }`}
+      aria-live="polite"
+    >
+      sázky {left}s
+    </span>
+  );
+}
 
 /** Odd lengths only — a match is first to ceil(bestOf/2). */
 const BEST_OF_OPTIONS = [1, 3, 5, 7, 9, 11, 13, 15];
@@ -42,6 +84,8 @@ type Leg = {
   winnerId: string | null;
   /** Whether the leg_winner market is still open for bets (live leg only). */
   bettingClosed?: boolean;
+  /** ISO instant the 30s window shuts; null once there is nothing to count. */
+  bettingClosesAt?: string | null;
 };
 export type Match = {
   id: string;
@@ -300,14 +344,17 @@ export function MatchRow({
                 {liveLeg.bettingClosed ? (
                   <Badge variant="secondary">Sázky uzavřeny</Badge>
                 ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={pending}
-                    onClick={closeBettingClick}
-                  >
-                    Uzavřít sázky na leg
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <LegBettingCountdown closesAt={liveLeg.bettingClosesAt ?? null} />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={pending}
+                      onClick={closeBettingClick}
+                    >
+                      Uzavřít sázky na leg
+                    </Button>
+                  </div>
                 )}
               </div>
               <div className="mt-2 flex gap-2">

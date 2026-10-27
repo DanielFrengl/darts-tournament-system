@@ -40,6 +40,7 @@ export function generateRoundRobin(playerIds: string[]): Pairing[] {
 // because this is where callers have always imported them from.
 export {
   computeStandings,
+  resolveGroupScoring,
   type FinishedMatch,
   type StandingRow,
 } from "@/lib/standings";
