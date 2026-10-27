@@ -10,11 +10,16 @@ import {
   players,
   type Player,
 } from "@/db/schema";
-import { computeStandings, type FinishedMatch } from "@/lib/match";
+import {
+  computeStandings,
+  resolveGroupScoring,
+  type FinishedMatch,
+} from "@/lib/match";
 import type { GroupTableRow } from "@/components/tournament/GroupTable";
 import type { BracketMatchVM } from "@/components/tournament/BracketView";
 import type { MatchListItem } from "@/components/tournament/MatchListCard";
 import type { TournamentConfig } from "@/lib/tournament-config";
+import { isMarketBettable } from "@/lib/betting-window";
 
 const PHASE_LABEL: Record<string, string> = {
   group: "Skupina",
@@ -76,7 +81,8 @@ export async function buildGroupViews(
       }));
     const standings = computeStandings(
       groupPlayers.map((p) => p.id),
-      finished
+      finished,
+      resolveGroupScoring(cfg.groupScoring)
     );
     const rows: GroupTableRow[] = standings.map((s, idx) => ({
       rank: idx + 1,
@@ -165,7 +171,9 @@ export async function buildMatchList(tournamentId: string): Promise<MatchListIte
   >();
   for (const s of sels) {
     const m = marketIdToMatch.get(s.marketId);
-    if (!m?.matchId || !s.playerId || m.status !== "open") continue;
+    // Same window rule as the betting page: an expired leg market shows no
+    // price, because no price is on offer.
+    if (!m?.matchId || !s.playerId || !isMarketBettable(m)) continue;
     let inner = oddsByMatchByPlayer.get(m.matchId);
     if (!inner) {
       inner = new Map();

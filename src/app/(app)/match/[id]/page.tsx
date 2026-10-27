@@ -117,6 +117,7 @@ export default async function MatchDetailPage({
         status: m.status,
         selections: sels,
         totalPool,
+        closesAt: m.closesAt ? m.closesAt.toISOString() : null,
         category,
         sortKey: legNumber,
       };

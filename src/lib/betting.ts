@@ -17,6 +17,7 @@ import { CapitalService } from "@/lib/capital";
 import { MarketService } from "@/lib/market";
 import { publish } from "@/lib/event-bus";
 import { isWholeStake } from "@/lib/validation";
+import { isMarketBettable } from "@/lib/betting-window";
 
 export type PlaceBetResult =
   | { ok: true; bet: Bet }
@@ -62,8 +63,12 @@ export class BettingService {
           .where(eq(markets.id, sel.marketId))
           .for("update");
         if (!market) throw new Error("market not found");
-        if (market.status !== "open") {
-          throw new Error("market is not open");
+        if (!isMarketBettable(market)) {
+          throw new Error(
+            market.status === "open"
+              ? "Sázky na tento leg jsou už uzavřené"
+              : "market is not open"
+          );
         }
         const [u] = await tx
           .select({ capital: users.capital })
@@ -262,7 +267,7 @@ export class BettingService {
           .where(inArray(markets.id, marketIds))
           .for("update");
         for (const m of ms) {
-          if (m.status !== "open") {
+          if (!isMarketBettable(m)) {
             throw new Error("Některý trh už není otevřený");
           }
         }

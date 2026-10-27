@@ -54,6 +54,7 @@ export default async function SancePage() {
     groupSize: cfg.groupSize,
     advancePerGroup: cfg.advancePerGroup,
     bestOfGroup: cfg.bestOfGroup,
+    groupScoring: cfg.groupScoring,
     bestOfQuarter: cfg.bestOfQuarter,
     bestOfSemi: cfg.bestOfSemi,
     bestOfFinal: cfg.bestOfFinal,

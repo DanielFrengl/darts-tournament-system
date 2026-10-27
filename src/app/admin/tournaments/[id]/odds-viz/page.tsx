@@ -26,6 +26,7 @@ export default async function OddsVizPage({
     groupSize: cfg.groupSize,
     advancePerGroup: cfg.advancePerGroup,
     bestOfGroup: cfg.bestOfGroup,
+    groupScoring: cfg.groupScoring,
     bestOfQuarter: cfg.bestOfQuarter,
     bestOfSemi: cfg.bestOfSemi,
     bestOfFinal: cfg.bestOfFinal,

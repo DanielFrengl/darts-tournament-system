@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { setupTestDb, truncateAll, teardownTestDb, testDb } from "../setup/db";
 import {
   appSettings,
@@ -17,6 +17,7 @@ import { defaultTournamentConfig } from "@/lib/tournament-config";
 import { MarketService } from "@/lib/market";
 import { CapitalService } from "@/lib/capital";
 import { BettingService } from "@/lib/betting";
+import { startLegWithMarkets, recordLegAndAdvance } from "@/lib/leg";
 
 const tournamentService = new TournamentService(testDb);
 const playerService = new PlayerService(testDb);
@@ -294,5 +295,122 @@ describe("a lopsided book", () => {
     const { light, heavy } = await book(100, 100_000);
     // 4 dp: that is the precision finalOdds is stored at.
     expect(1 / light + 1 / heavy).toBeCloseTo(1, 4);
+  });
+});
+
+describe("the 30s leg betting window", () => {
+  /** Start a leg and hand back its leg_winner market + selections. */
+  async function liveLeg() {
+    const { match } = await setupBettableMatch();
+    const leg = await startLegWithMarkets(match.id);
+    const [mk] = await testDb
+      .select()
+      .from(markets)
+      .where(and(eq(markets.legId, leg.id), eq(markets.type, "leg_winner")));
+    const sels = await marketService.getSelections(mk!.id);
+    return { leg, market: mk!, sels };
+  }
+
+  it("opens the leg market with a deadline 30s out", async () => {
+    const { leg, market } = await liveLeg();
+    expect(market.status).toBe("open");
+    expect(market.closesAt).not.toBeNull();
+    const started = leg.startedAt!.getTime();
+    expect(market.closesAt!.getTime() - started).toBe(30_000);
+  });
+
+  it("takes a bet while the window is open", async () => {
+    const u = await createUser({ capital: "1000" });
+    const { sels } = await liveLeg();
+    const r = await bettingService.placeBet(u.id, sels[0]!.id, 100);
+    expect(r.ok).toBe(true);
+  });
+
+  it("refuses a bet once the window has lapsed, with the row still open", async () => {
+    const u = await createUser({ capital: "1000" });
+    const { market, sels } = await liveLeg();
+    // Wind the deadline back rather than sleeping 30s.
+    await testDb
+      .update(markets)
+      .set({ closesAt: new Date(Date.now() - 1000) })
+      .where(eq(markets.id, market.id));
+
+    const r = await bettingService.placeBet(u.id, sels[0]!.id, 100);
+
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/uzav/i);
+    // The status column is untouched — nothing runs to write it.
+    const [still] = await testDb
+      .select()
+      .from(markets)
+      .where(eq(markets.id, market.id));
+    expect(still!.status).toBe("open");
+    // And no capital moved.
+    const [reloaded] = await testDb
+      .select()
+      .from(users)
+      .where(eq(users.id, u.id));
+    expect(Number(reloaded!.capital)).toBe(1000);
+  });
+
+  it("refuses a parlay leg whose window has lapsed", async () => {
+    const u = await createUser({ capital: "1000" });
+    const { match, matchWinnerSelections } = await setupBettableMatch();
+    const leg = await startLegWithMarkets(match.id);
+    const [legMarket] = await testDb
+      .select()
+      .from(markets)
+      .where(and(eq(markets.legId, leg.id), eq(markets.type, "leg_winner")));
+    const legSels = await marketService.getSelections(legMarket!.id);
+    await testDb
+      .update(markets)
+      .set({ closesAt: new Date(Date.now() - 1000) })
+      .where(eq(markets.id, legMarket!.id));
+
+    const r = await bettingService.placeParlay(
+      u.id,
+      [legSels[0]!.id, matchWinnerSelections[0]!.id],
+      50
+    );
+
+    expect(r.ok).toBe(false);
+  });
+
+  it("still settles a leg whose window lapsed before the winner was recorded", async () => {
+    // Betting shutting itself must not get in the way of paying out.
+    const u = await createUser({ capital: "1000" });
+    const { match, players: [a] } = await setupBettableMatch();
+    const leg = await startLegWithMarkets(match.id);
+    const [legMarket] = await testDb
+      .select()
+      .from(markets)
+      .where(and(eq(markets.legId, leg.id), eq(markets.type, "leg_winner")));
+    const legSels = await marketService.getSelections(legMarket!.id);
+    const onA = legSels.find((s) => s.playerId === a.id)!;
+    const placed = await bettingService.placeBet(u.id, onA.id, 100);
+    expect(placed.ok).toBe(true);
+
+    await testDb
+      .update(markets)
+      .set({ closesAt: new Date(Date.now() - 1000) })
+      .where(eq(markets.id, legMarket!.id));
+    await recordLegAndAdvance(leg.id, a.id);
+
+    if (!placed.ok) return;
+    const [bet] = await testDb
+      .select()
+      .from(bets)
+      .where(eq(bets.id, placed.bet.id));
+    expect(bet!.status).toBe("won");
+    const [reloaded] = await testDb
+      .select()
+      .from(users)
+      .where(eq(users.id, u.id));
+    expect(Number(reloaded!.capital)).toBeGreaterThan(900);
+  });
+
+  it("leaves match-winner books without a deadline", async () => {
+    const { matchWinnerMarket } = await setupBettableMatch();
+    expect(matchWinnerMarket.closesAt).toBeNull();
   });
 });

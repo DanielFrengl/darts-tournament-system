@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { tournamentService } from "@/lib/tournament";
+import { resolveGroupScoring } from "@/lib/match";
 import { playerService } from "@/lib/player";
 import { matchService } from "@/lib/match";
 import { TournamentControls } from "@/components/admin/TournamentControls";
@@ -111,6 +112,12 @@ export default async function AdminTournamentDetail({
             <dd>{t.configJson.groupCount}</dd>
             <dt className="text-muted-foreground">Postupuje ze skupiny</dt>
             <dd>{t.configJson.advancePerGroup}</dd>
+            <dt className="text-muted-foreground">Bodování skupin</dt>
+            <dd>
+              {resolveGroupScoring(t.configJson.groupScoring) === "win_only"
+                ? "výhra 3 / prohra 0"
+                : "3 za čistou výhru, 2 jinak / 1 za leg"}
+            </dd>
             <dt className="text-muted-foreground">3. místo</dt>
             <dd>{t.configJson.thirdPlaceMatch ? "ano" : "ne"}</dd>
             <dt className="text-muted-foreground">Startovní kapitál</dt>

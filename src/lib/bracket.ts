@@ -2,7 +2,11 @@ import { and, asc, eq } from "drizzle-orm";
 import { matches, groups, players, tournaments, type Match } from "@/db/schema";
 import type { DB } from "@/db/client";
 import type { TournamentConfig } from "@/lib/tournament-config";
-import { computeStandings, type FinishedMatch } from "@/lib/match";
+import {
+  computeStandings,
+  resolveGroupScoring,
+  type FinishedMatch,
+} from "@/lib/match";
 import { seedBracket, type GroupAdvancers } from "@/lib/bracket-seed";
 
 // The seeding rules themselves are pure and shared with the Monte Carlo
@@ -47,7 +51,8 @@ export class BracketService {
       }));
       const standings = computeStandings(
         groupPlayers.map((p) => p.id),
-        finished
+        finished,
+        resolveGroupScoring(cfg.groupScoring)
       );
       out.push({
         groupName: g.name,

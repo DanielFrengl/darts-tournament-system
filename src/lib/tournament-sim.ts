@@ -6,7 +6,12 @@
 // `seedBracket`. Anything else would price markets for a tournament this
 // app does not actually run.
 import { winProbability } from "@/lib/elo";
-import { computeStandings, type FinishedMatch } from "@/lib/standings";
+import {
+  computeStandings,
+  resolveGroupScoring,
+  type FinishedMatch,
+  type GroupScoring,
+} from "@/lib/standings";
 import {
   seedBracket,
   type BracketMatch,
@@ -28,6 +33,8 @@ export interface SimConfig {
   bestOfSemi: number;
   bestOfFinal: number;
   thirdPlaceMatch?: boolean;
+  /** Absent keeps the pre-configurable scheme, same as the live table. */
+  groupScoring?: GroupScoring;
 }
 
 /**
@@ -249,7 +256,8 @@ function simulateOnce(
     }
     const ranked = computeStandings(
       g.map((p) => p.id),
-      finished
+      finished,
+      resolveGroupScoring(cfg.groupScoring)
     );
     advancers.push({
       groupName: String.fromCharCode("A".charCodeAt(0) + gi),
